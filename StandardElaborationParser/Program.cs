@@ -22,6 +22,11 @@ namespace StandardElaborationParser
         public XElement[] Paragraphs;
         public string Text;
         public XElement DocumentXML;
+
+        public override string ToString()
+        {
+            return String.Format("    <td rowspan=\"{0}\" colspan=\"{1}\">\n      {2}\n    </td>", RowSpan, ColSpan, String.Join("\n      ", Paragraphs.Select(p => p.ToString()).ToArray()));
+        }
     }
 
     class Table
@@ -29,6 +34,30 @@ namespace StandardElaborationParser
         public int Columns { get { return Cells.GetLength(1); } }
         public int Rows { get { return Cells.GetLength(0); } }
         public TableCell[,] Cells;
+
+        public override string ToString()
+        {
+            return String.Format("<table>\n{0}\n</table>",
+                String.Join("\n",
+                    Enumerable.Range(0, Rows).Select(ri =>
+                        String.Format("  <tr>\n{1}\n  </tr>",
+                            String.Join("\n",
+                                Enumerable.Range(0, Columns).Select(ci =>
+                                    Cells[ri, ci] == null ? null : Cells[ri, ci].ToString()
+                                ).Where(c => c != null)
+                                 .ToArray()
+                            )
+                        )
+                    ).ToArray()
+                )
+            );
+        }
+    }
+
+    class Document
+    {
+        public XElement Body { get; set; }
+        public Dictionary<string, XElement> Styles { get; set; }
     }
 
     class Group
@@ -36,14 +65,14 @@ namespace StandardElaborationParser
         public Dictionary<string, Group> Groups = new Dictionary<string,Group>();
         public List<TableCell[]> Descriptors = new List<TableCell[]>();
 
-        public IEnumerable<Tuple<string, TableCell[]>> GetDescriptors(string id)
+        public IEnumerable<KLARow> GetDescriptors(string id)
         {
             int index = 1;
 
             foreach (Group g in Groups.Values)
             {
                 string gid = (id == null ? "" : (id + ".")) + index.ToString();
-                foreach (Tuple<string, TableCell[]> t in g.GetDescriptors(gid))
+                foreach (KLARow t in g.GetDescriptors(gid))
                 {
                     yield return t;
                 }
@@ -53,7 +82,7 @@ namespace StandardElaborationParser
 
             foreach (TableCell[] row in Descriptors)
             {
-                yield return new Tuple<string, TableCell[]>(id, row);
+                yield return new KLARow { GroupID = id, AchievementDescriptors = row };
             }
         }
 
@@ -76,6 +105,12 @@ namespace StandardElaborationParser
         }
     }
 
+    class KLARow
+    {
+        public string GroupID { get; set; }
+        public TableCell[] AchievementDescriptors { get; set; }
+    }
+
     class KLA
     {
         public string YearLevel;
@@ -83,8 +118,9 @@ namespace StandardElaborationParser
         public List<Tuple<string, TableCell>> Definitions = new List<Tuple<string,TableCell>>();
         public List<string> AchievementLevels = new List<string>();
         public Group RootGroup = new Group();
-        public XElement DocumentXML;
-        public IEnumerable<Tuple<string, TableCell[]>> Rows
+        public List<Table> Tables;
+        public Document DocumentXML;
+        public IEnumerable<KLARow> Rows
         {
             get
             {
@@ -119,7 +155,7 @@ namespace StandardElaborationParser
             Console.WriteLine("{0}</{1}>", new String(' ', depth), node.Name.ToString());
         }
 
-        static List<XElement> CellContent(XElement wordcell)
+        static List<XElement> CellContent(XElement wordcell, Dictionary<string, XElement> styles)
         {
             List<XElement> output = new List<XElement>();
             XElement list = null;
@@ -137,7 +173,7 @@ namespace StandardElaborationParser
                         style = psval.Value;
                     }
 
-                    if (style == "Tablebullets")
+                    if (styles.ContainsKey(style) && styles[style].Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0)
                     {
                         if (list == null)
                         {
@@ -198,7 +234,7 @@ namespace StandardElaborationParser
             return String.Join("\n", lines);
         }
 
-        static XElement GetXml(Word.Application app, string docfile)
+        static Document GetXml(Word.Application app, string docfile)
         {
             string xml;
             
@@ -214,19 +250,29 @@ namespace StandardElaborationParser
                 File.WriteAllText(docfile + ".xml", xml);
             }
 
-            return XDocument.Parse(xml).Root
-                                       .Elements(ns_xmlPackage + "part")
-                                       .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
-                                       .SelectMany(e => e.Elements(ns_wpml + "document"))
-                                       .SelectMany(e => e.Elements(ns_wpml + "body"))
-                                       .Single();
+            XElement root = XDocument.Parse(xml).Root;
+
+            return new Document
+            {
+                Body   = root.Elements(ns_xmlPackage + "part")
+                             .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
+                             .SelectMany(e => e.Elements(ns_wpml + "document"))
+                             .SelectMany(e => e.Elements(ns_wpml + "body"))
+                             .Single(),
+                Styles = root.Elements(ns_xmlPackage + "part")
+                             .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
+                             .SelectMany(e => e.Elements(ns_wpml + "styles"))
+                             .Single()
+                             .Elements(ns_wpml + "style")
+                             .ToDictionary(s => s.Attribute(ns_wpml + "styleId").Value, s => s)
+            };
         }
 
-        static List<Table> GetTables(XElement body)
+        static List<Table> GetTables(Document doc)
         {
             List<Table> tables = new List<Table>();
             int tblno = 0;
-            foreach (XElement tbl in body.Elements(ns_wpml + "tbl"))
+            foreach (XElement tbl in doc.Body.Elements(ns_wpml + "tbl"))
             {
                 //Console.WriteLine(tbl.ToString());
                 Table table = new Table();
@@ -274,7 +320,7 @@ namespace StandardElaborationParser
                                 Col = tcno,
                                 RowSpan = 1,
                                 ColSpan = colspan,
-                                Paragraphs = CellContent(tc).ToArray(),
+                                Paragraphs = CellContent(tc, doc.Styles).ToArray(),
                                 Text = CellText(tc),
                                 DocumentXML = tc
                             };
@@ -321,9 +367,9 @@ namespace StandardElaborationParser
             foreach (KLA kla in klas)
             {
                 Console.WriteLine("Processing {0} {1}", kla.YearLevel, kla.Subject);
-                List<Table> tables = GetTables(kla.DocumentXML);
+                kla.Tables = GetTables(kla.DocumentXML);
 
-                foreach (Table table in tables)
+                foreach (Table table in kla.Tables)
                 {
                     int cols = table.Columns;
                     int rows = table.Rows;
