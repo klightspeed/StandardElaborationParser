@@ -1,0 +1,374 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Word = Microsoft.Office.Interop.Word;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using System.IO;
+using Google.Apis.Drive;
+using Google.GData.Spreadsheets;
+
+namespace StandardElaborationParser
+{
+    class TableCell
+    {
+        public int Row;
+        public int Col;
+        public int RowSpan;
+        public int ColSpan;
+        public XElement[] Paragraphs;
+        public string Text;
+        public XElement DocumentXML;
+    }
+
+    class Table
+    {
+        public int Columns { get { return Cells.GetLength(1); } }
+        public int Rows { get { return Cells.GetLength(0); } }
+        public TableCell[,] Cells;
+    }
+
+    class Group
+    {
+        public Dictionary<string, Group> Groups = new Dictionary<string,Group>();
+        public List<TableCell[]> Descriptors = new List<TableCell[]>();
+
+        public IEnumerable<Tuple<string, TableCell[]>> GetDescriptors(string id)
+        {
+            int index = 1;
+
+            foreach (Group g in Groups.Values)
+            {
+                string gid = (id == null ? "" : (id + ".")) + index.ToString();
+                foreach (Tuple<string, TableCell[]> t in g.GetDescriptors(gid))
+                {
+                    yield return t;
+                }
+
+                index++;
+            }
+
+            foreach (TableCell[] row in Descriptors)
+            {
+                yield return new Tuple<string, TableCell[]>(id, row);
+            }
+        }
+
+        public IEnumerable<XElement> ToXML()
+        {
+            foreach (KeyValuePair<string, Group> g in Groups)
+            {
+                yield return new XElement("group",
+                    new XAttribute("name", g.Key),
+                    g.Value.ToXML()
+                );
+            }
+
+            foreach (TableCell[] row in Descriptors)
+            {
+                yield return new XElement("row",
+                    row.Select(d => new XElement("descriptor", d.Paragraphs))
+                );
+            }
+        }
+    }
+
+    class KLA
+    {
+        public string YearLevel;
+        public string Subject;
+        public List<Tuple<string, TableCell>> Definitions = new List<Tuple<string,TableCell>>();
+        public List<string> AchievementLevels = new List<string>();
+        public Group RootGroup = new Group();
+        public XElement DocumentXML;
+        public IEnumerable<Tuple<string, TableCell[]>> Rows
+        {
+            get
+            {
+                return RootGroup.GetDescriptors(null);
+            }
+        }
+
+        public XDocument ToXDocument()
+        {
+            return new XDocument(
+                new XElement("kla",
+                    new XAttribute("yearLevel", YearLevel),
+                    new XAttribute("subject", Subject),
+                    RootGroup.ToXML()
+                )
+            );
+        }
+    }
+
+    class Program
+    {
+        static XNamespace ns_xmlPackage = "http://schemas.microsoft.com/office/2006/xmlPackage";
+        static XNamespace ns_wpml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+        static void Recurse(XElement node, int depth)
+        {
+            Console.WriteLine("{0}<{1}>", new String(' ', depth), node.Name.ToString());
+            foreach (XElement child in node.Elements())
+            {
+                Recurse(child, depth + 1);
+            }
+            Console.WriteLine("{0}</{1}>", new String(' ', depth), node.Name.ToString());
+        }
+
+        static List<XElement> CellContent(XElement wordcell)
+        {
+            List<XElement> output = new List<XElement>();
+            XElement list = null;
+
+            foreach (XElement p in wordcell.Elements(ns_wpml + "p"))
+            {
+                if (p.Value != "")
+                {
+                    string style = "";
+                    XElement ppr = p.Element(ns_wpml + "pPr");
+                    XElement pstyle = ppr.Element(ns_wpml + "pStyle");
+                    if (pstyle != null)
+                    {
+                        XAttribute psval = pstyle.Attribute(ns_wpml + "val");
+                        style = psval.Value;
+                    }
+
+                    if (style == "Tablebullets")
+                    {
+                        if (list == null)
+                        {
+                            list = new XElement("ul");
+                        }
+
+                        list.Add(new XElement("li", p.Value));
+                    }
+                    else
+                    {
+                        if (list != null)
+                        {
+                            output.Add(list);
+                            list = null;
+                        }
+
+                        output.Add(new XElement("p", p.Value));
+                    }
+                }
+            }
+
+            if (list != null)
+            {
+                output.Add(list);
+                list = null;
+            }
+
+            return output;
+        }
+
+        static string CellText(XElement wordcell)
+        {
+            List<string> lines = new List<string>();
+
+            foreach (XElement p in wordcell.Elements(ns_wpml + "p"))
+            {
+                string text = p.Value;
+                if (text != "")
+                {
+                    string style = "";
+                    XElement ppr = p.Element(ns_wpml + "pPr");
+                    XElement pstyle = ppr.Element(ns_wpml + "pStyle");
+                    if (pstyle != null)
+                    {
+                        XAttribute psval = pstyle.Attribute(ns_wpml + "val");
+                        style = psval.Value;
+                    }
+
+                    if (style == "Tablebullets")
+                    {
+                        text = " • " + text;
+                    }
+
+                    lines.Add(text);
+                }
+            }
+
+            return String.Join("\n", lines);
+        }
+
+        static XElement GetXml(Word.Application app, string docfile)
+        {
+            string xml;
+            
+            if (File.Exists(docfile + ".xml"))
+            {
+                xml = File.ReadAllText(docfile + ".xml");
+            }
+            else
+            {
+                Word.Document doc = app.Documents.Open(docfile + ".doc");
+                xml = doc.WordOpenXML;
+                ((Word._Document)doc).Close(SaveChanges: false);
+                File.WriteAllText(docfile + ".xml", xml);
+            }
+
+            return XDocument.Parse(xml).Root
+                                       .Elements(ns_xmlPackage + "part")
+                                       .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
+                                       .SelectMany(e => e.Elements(ns_wpml + "document"))
+                                       .SelectMany(e => e.Elements(ns_wpml + "body"))
+                                       .Single();
+        }
+
+        static List<Table> GetTables(XElement body)
+        {
+            List<Table> tables = new List<Table>();
+            int tblno = 0;
+            foreach (XElement tbl in body.Elements(ns_wpml + "tbl"))
+            {
+                //Console.WriteLine(tbl.ToString());
+                Table table = new Table();
+                XElement[] trs = tbl.Elements(ns_wpml + "tr").ToArray();
+                int nrcols = tbl.Element(ns_wpml + "tblGrid").Elements(ns_wpml + "gridCol").Count();
+                int nrrows = trs.Length;
+                table.Cells = new TableCell[nrrows, nrcols];
+                TableCell[] columns = new TableCell[nrcols];
+                //Console.WriteLine("Table {0}", tblno);
+                int trno = 0;
+                foreach (XElement tr in tbl.Elements(ns_wpml + "tr"))
+                {
+                    //Console.WriteLine("  Row {0}", trno);
+                    int tcno = 0;
+                    foreach (XElement tc in tr.Elements(ns_wpml + "tc"))
+                    {
+                        //Console.WriteLine("    Col {0}", tcno);
+                        XElement tcpr = tc.Element(ns_wpml + "tcPr");
+                        XElement vMerge = tcpr.Element(ns_wpml + "vMerge");
+                        bool dovMerge = false;
+
+                        if (vMerge != null && vMerge.Attribute(ns_wpml + "val") == null)
+                        {
+                            dovMerge = true;
+                        }
+
+                        XElement gridSpan = tcpr.Element(ns_wpml + "gridSpan");
+                        int colspan = 1;
+
+                        if (gridSpan != null)
+                        {
+                            colspan = Int32.Parse(gridSpan.Attribute(ns_wpml + "val").Value);
+                        }
+
+                        if (dovMerge)
+                        {
+                            columns[tcno].RowSpan++;
+                            table.Cells[trno, tcno] = columns[tcno];
+                        }
+                        else
+                        {
+                            TableCell cell = new TableCell
+                            {
+                                Row = trno,
+                                Col = tcno,
+                                RowSpan = 1,
+                                ColSpan = colspan,
+                                Paragraphs = CellContent(tc).ToArray(),
+                                Text = CellText(tc),
+                                DocumentXML = tc
+                            };
+                            columns[tcno] = cell;
+                            table.Cells[trno, tcno] = cell;
+                        }
+
+                        //Console.WriteLine("      {0}", tcpr.ToString());
+                        tcno += colspan;
+                    }
+                    trno++;
+                }
+                tables.Add(table);
+                tblno++;
+            }
+
+            return tables;
+        }
+
+        static void Main(string[] args)
+        {
+            List<KLA> klas = new List<KLA>();
+            
+            Word.Application app = new Word.Application();
+            
+            foreach (string grade in new string[] { "prep", "yr1", "yr2", "yr3", "yr4", "yr5", "yr6", "yr7", "yr8", "yr9", "yr10" })
+            {
+                foreach (string subject in new string[] { "eng", "geog", "hist", "math", "sci" })
+                {
+                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject + "_" + grade + "_se");
+                    Console.WriteLine("Reading {0} {1} ({2})", grade, subject, filename);
+                    KLA kla = new KLA
+                    {
+                        Subject = subject,
+                        YearLevel = grade,
+                        DocumentXML = GetXml(app, filename)
+                    };
+                    klas.Add(kla);
+                }
+            }
+
+            ((Word._Application)app).Quit();
+
+            foreach (KLA kla in klas)
+            {
+                Console.WriteLine("Processing {0} {1}", kla.YearLevel, kla.Subject);
+                List<Table> tables = GetTables(kla.DocumentXML);
+
+                foreach (Table table in tables)
+                {
+                    int cols = table.Columns;
+                    int rows = table.Rows;
+
+                    if (cols >= 7)
+                    {
+                        kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
+
+                        for (int r = 2; r < rows; r++)
+                        {
+                            List<TableCell> cells = Enumerable.Range(0, cols).Select(c => table.Cells[r, c]).Where(c => c != null).Reverse().ToList();
+                            List<string> groups = cells.Skip(5).Reverse().Select(c => c.Text.Replace("\n", ": ")).ToList();
+                            TableCell[] descs = cells.Take(5).Reverse().ToArray();
+                            Group grp = kla.RootGroup;
+
+                            foreach (string grpname in groups)
+                            {
+                                if (!grp.Groups.ContainsKey(grpname))
+                                {
+                                    grp.Groups[grpname] = new Group();
+                                }
+
+                                grp = grp.Groups[grpname];
+                            }
+
+                            grp.Descriptors.Add(descs);
+                        }
+                    }
+                    else if (cols == 2 && table.Cells[0, 0].Text == "Term")
+                    {
+                        for (int r = 1; r < rows; r++)
+                        {
+                            kla.Definitions.Add(new Tuple<string, TableCell>(table.Cells[r, 0].Text, table.Cells[r, 1]));
+                        }
+                    }
+                }
+            }
+
+            foreach (KLA kla in klas)
+            {
+                kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevel, kla.Subject));
+            }
+
+            //Recurse(xdoc.Root, 0);
+
+        }
+    }
+}
