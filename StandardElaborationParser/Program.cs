@@ -62,7 +62,8 @@ namespace StandardElaborationParser
 
     class Group
     {
-        public Dictionary<string, Group> Groups = new Dictionary<string,Group>();
+        protected static readonly XNamespace ns = "http://tempuri.org/XmlLasdDatabase.xsd";
+        public Dictionary<string, Group> Groups = new Dictionary<string, Group>();
         public List<TableCell[]> Descriptors = new List<TableCell[]>();
 
         public IEnumerable<KLARow> GetDescriptors(string id)
@@ -88,18 +89,18 @@ namespace StandardElaborationParser
 
         public IEnumerable<XElement> ToXML()
         {
-            foreach (KeyValuePair<string, Group> g in Groups)
+            foreach (KeyValuePair<string, Group> g_kvp in Groups)
             {
-                yield return new XElement("group",
-                    new XAttribute("name", g.Key),
-                    g.Value.ToXML()
+                yield return new XElement(ns + "group",
+                    new XAttribute("name", g_kvp.Key),
+                    g_kvp.Value.ToXML()
                 );
             }
 
             foreach (TableCell[] row in Descriptors)
             {
-                yield return new XElement("row",
-                    row.Select(d => new XElement("descriptor", d.Paragraphs))
+                yield return new XElement(ns + "row",
+                    row.Select(d => new XElement(ns + "descriptor", d.Paragraphs))
                 );
             }
         }
@@ -113,8 +114,11 @@ namespace StandardElaborationParser
 
     class KLA
     {
+        protected static readonly XNamespace ns = "http://tempuri.org/XmlLasdDatabase.xsd";
         public string YearLevel;
         public string Subject;
+        public string YearLevelID;
+        public string SubjectID;
         public List<Tuple<string, TableCell>> Definitions = new List<Tuple<string,TableCell>>();
         public List<string> AchievementLevels = new List<string>();
         public Group RootGroup = new Group();
@@ -131,9 +135,11 @@ namespace StandardElaborationParser
         public XDocument ToXDocument()
         {
             return new XDocument(
-                new XElement("kla",
+                new XElement(ns + "kla",
                     new XAttribute("yearLevel", YearLevel),
+                    new XAttribute("yearLevelId", YearLevelID),
                     new XAttribute("subject", Subject),
+                    new XAttribute("subjectId", SubjectID),
                     RootGroup.ToXML()
                 )
             );
@@ -144,6 +150,31 @@ namespace StandardElaborationParser
     {
         static XNamespace ns_xmlPackage = "http://schemas.microsoft.com/office/2006/xmlPackage";
         static XNamespace ns_wpml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        static XNamespace ns_lasd = "http://tempuri.org/XmlLasdDatabase.xsd";
+
+        static Dictionary<string, string> YearLevels = new Dictionary<string, string>
+        {
+            { "prep", "Prep" },
+            { "yr1", "Year 1" },
+            { "yr2", "Year 2" },
+            { "yr3", "Year 3" },
+            { "yr4", "Year 4" },
+            { "yr5", "Year 5" },
+            { "yr6", "Year 6" },
+            { "yr7", "Year 7" },
+            { "yr8", "Year 8" },
+            { "yr9", "Year 9" },
+            { "yr10", "Year 10" }
+        };
+
+        static Dictionary<string, string> Subjects = new Dictionary<string, string>
+        {
+            { "eng", "English" },
+            { "math", "Mathematics" },
+            { "geog", "Geography" },
+            { "hist", "History" },
+            { "sci", "Science" }
+        };
 
         static void Recurse(XElement node, int depth)
         {
@@ -173,14 +204,16 @@ namespace StandardElaborationParser
                         style = psval.Value;
                     }
 
-                    if (styles.ContainsKey(style) && styles[style].Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0)
+                    if (( p.Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0) ||
+                        (styles.ContainsKey(style) && styles[style].Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0))
+
                     {
                         if (list == null)
                         {
-                            list = new XElement("ul");
+                            list = new XElement(ns_lasd + "ul");
                         }
 
-                        list.Add(new XElement("li", p.Value));
+                        list.Add(new XElement(ns_lasd + "li", p.Value));
                     }
                     else
                     {
@@ -190,7 +223,7 @@ namespace StandardElaborationParser
                             list = null;
                         }
 
-                        output.Add(new XElement("p", p.Value));
+                        output.Add(new XElement(ns_lasd + "p", p.Value));
                     }
                 }
             }
@@ -346,16 +379,18 @@ namespace StandardElaborationParser
             
             Word.Application app = new Word.Application();
             
-            foreach (string grade in new string[] { "prep", "yr1", "yr2", "yr3", "yr4", "yr5", "yr6", "yr7", "yr8", "yr9", "yr10" })
+            foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
             {
-                foreach (string subject in new string[] { "eng", "geog", "hist", "math", "sci" })
+                foreach (KeyValuePair<string, string> subject_kvp in Subjects)
                 {
-                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject + "_" + grade + "_se");
-                    Console.WriteLine("Reading {0} {1} ({2})", grade, subject, filename);
+                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se");
+                    Console.WriteLine("Reading {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
                     KLA kla = new KLA
                     {
-                        Subject = subject,
-                        YearLevel = grade,
+                        YearLevelID = grade_kvp.Key,
+                        YearLevel = grade_kvp.Value,
+                        SubjectID = subject_kvp.Key,
+                        Subject = subject_kvp.Value,
                         DocumentXML = GetXml(app, filename)
                     };
                     klas.Add(kla);
@@ -410,7 +445,7 @@ namespace StandardElaborationParser
 
             foreach (KLA kla in klas)
             {
-                kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevel, kla.Subject));
+                kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID));
             }
 
             //Recurse(xdoc.Root, 0);
