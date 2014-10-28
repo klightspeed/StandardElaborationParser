@@ -140,6 +140,12 @@ namespace StandardElaborationParser
                     new XAttribute("yearLevelId", YearLevelID),
                     new XAttribute("subject", Subject),
                     new XAttribute("subjectId", SubjectID),
+                    new XElement(ns + "terms",
+                        Definitions.Select(t => new XElement(ns + "term",
+                            t.Item1.Split(';', ',').Select(k => new XElement(ns + "keyword", k.Trim())),
+                            new XElement(ns + "description", t.Item2.Paragraphs)
+                        ))
+                    ),
                     RootGroup.ToXML()
                 )
             );
