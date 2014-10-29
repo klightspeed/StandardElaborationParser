@@ -10,10 +10,11 @@ using System.Xml.XPath;
 using System.IO;
 using Google.Apis.Drive;
 using Google.GData.Spreadsheets;
+using TSVCEO.XmlLasdDatabase;
 
 namespace StandardElaborationParser
 {
-    class TableCell
+    class WordTableCell
     {
         public int Row;
         public int Col;
@@ -29,11 +30,11 @@ namespace StandardElaborationParser
         }
     }
 
-    class Table
+    class WordTable
     {
         public int Columns { get { return Cells.GetLength(1); } }
         public int Rows { get { return Cells.GetLength(0); } }
-        public TableCell[,] Cells;
+        public WordTableCell[,] Cells;
 
         public override string ToString()
         {
@@ -54,102 +55,17 @@ namespace StandardElaborationParser
         }
     }
 
-    class Document
+    class WordDocument
     {
         public XElement Body { get; set; }
         public Dictionary<string, XElement> Styles { get; set; }
     }
 
-    class Group
+    class KLADocument
     {
-        protected static readonly XNamespace ns = "http://tempuri.org/XmlLasdDatabase.xsd";
-        public Dictionary<string, Group> Groups = new Dictionary<string, Group>();
-        public List<TableCell[]> Descriptors = new List<TableCell[]>();
-
-        public IEnumerable<KLARow> GetDescriptors(string id)
-        {
-            int index = 1;
-
-            foreach (Group g in Groups.Values)
-            {
-                string gid = (id == null ? "" : (id + ".")) + index.ToString();
-                foreach (KLARow t in g.GetDescriptors(gid))
-                {
-                    yield return t;
-                }
-
-                index++;
-            }
-
-            foreach (TableCell[] row in Descriptors)
-            {
-                yield return new KLARow { GroupID = id, AchievementDescriptors = row };
-            }
-        }
-
-        public IEnumerable<XElement> ToXML()
-        {
-            foreach (KeyValuePair<string, Group> g_kvp in Groups)
-            {
-                yield return new XElement(ns + "group",
-                    new XAttribute("name", g_kvp.Key),
-                    g_kvp.Value.ToXML()
-                );
-            }
-
-            foreach (TableCell[] row in Descriptors)
-            {
-                yield return new XElement(ns + "row",
-                    row.Select(d => new XElement(ns + "descriptor", d.Paragraphs))
-                );
-            }
-        }
-    }
-
-    class KLARow
-    {
-        public string GroupID { get; set; }
-        public TableCell[] AchievementDescriptors { get; set; }
-    }
-
-    class KLA
-    {
-        protected static readonly XNamespace ns = "http://tempuri.org/XmlLasdDatabase.xsd";
-        public string YearLevel;
-        public string Subject;
-        public string YearLevelID;
-        public string SubjectID;
-        public List<Tuple<string, TableCell>> Definitions = new List<Tuple<string,TableCell>>();
-        public List<string> AchievementLevels = new List<string>();
-        public Group RootGroup = new Group();
-        public List<Table> Tables;
-        public Document DocumentXML;
-        public IEnumerable<KLARow> Rows
-        {
-            get
-            {
-                return RootGroup.GetDescriptors(null);
-            }
-        }
-
-        public XDocument ToXDocument()
-        {
-            return new XDocument(
-                new XElement(ns + "kla",
-                    new XAttribute("yearLevel", YearLevel),
-                    new XAttribute("yearLevelId", YearLevelID),
-                    new XAttribute("subject", Subject),
-                    new XAttribute("subjectId", SubjectID),
-                    new XElement(ns + "terms",
-                        Definitions.Select(t => new XElement(ns + "term",
-                            t.Item1.Split(';', ',').Select(k => new XElement(ns + "keyword", k.Trim())),
-                            new XElement(ns + "description", t.Item2.Paragraphs)
-                        ))
-                    ),
-                    RootGroup.ToXML()
-                )
-            );
-        }
+        public List<WordTable> Tables;
+        public WordDocument DocumentXML;
+        public KeyLearningArea KLA;
     }
 
     class Program
@@ -273,7 +189,7 @@ namespace StandardElaborationParser
             return String.Join("\n", lines);
         }
 
-        static Document GetXml(Word.Application app, string docfile)
+        static WordDocument GetXml(Word.Application app, string docfile)
         {
             string xml;
             
@@ -291,7 +207,7 @@ namespace StandardElaborationParser
 
             XElement root = XDocument.Parse(xml).Root;
 
-            return new Document
+            return new WordDocument
             {
                 Body   = root.Elements(ns_xmlPackage + "part")
                              .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
@@ -307,19 +223,19 @@ namespace StandardElaborationParser
             };
         }
 
-        static List<Table> GetTables(Document doc)
+        static List<WordTable> GetTables(WordDocument doc)
         {
-            List<Table> tables = new List<Table>();
+            List<WordTable> tables = new List<WordTable>();
             int tblno = 0;
             foreach (XElement tbl in doc.Body.Elements(ns_wpml + "tbl"))
             {
                 //Console.WriteLine(tbl.ToString());
-                Table table = new Table();
+                WordTable table = new WordTable();
                 XElement[] trs = tbl.Elements(ns_wpml + "tr").ToArray();
                 int nrcols = tbl.Element(ns_wpml + "tblGrid").Elements(ns_wpml + "gridCol").Count();
                 int nrrows = trs.Length;
-                table.Cells = new TableCell[nrrows, nrcols];
-                TableCell[] columns = new TableCell[nrcols];
+                table.Cells = new WordTableCell[nrrows, nrcols];
+                WordTableCell[] columns = new WordTableCell[nrcols];
                 //Console.WriteLine("Table {0}", tblno);
                 int trno = 0;
                 foreach (XElement tr in tbl.Elements(ns_wpml + "tr"))
@@ -353,7 +269,7 @@ namespace StandardElaborationParser
                         }
                         else
                         {
-                            TableCell cell = new TableCell
+                            WordTableCell cell = new WordTableCell
                             {
                                 Row = trno,
                                 Col = tcno,
@@ -381,7 +297,7 @@ namespace StandardElaborationParser
 
         static void Main(string[] args)
         {
-            List<KLA> klas = new List<KLA>();
+            List<KLADocument> kladocs = new List<KLADocument>();
             
             Word.Application app = new Word.Application();
             
@@ -391,67 +307,93 @@ namespace StandardElaborationParser
                 {
                     string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se");
                     Console.WriteLine("Reading {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
-                    KLA kla = new KLA
+                    KLADocument kla = new KLADocument
                     {
-                        YearLevelID = grade_kvp.Key,
-                        YearLevel = grade_kvp.Value,
-                        SubjectID = subject_kvp.Key,
-                        Subject = subject_kvp.Value,
+                        KLA = new KeyLearningArea
+                        {
+                            YearLevelID = grade_kvp.Key,
+                            YearLevel = grade_kvp.Value,
+                            SubjectID = subject_kvp.Key,
+                            Subject = subject_kvp.Value,
+                            Groups = new List<AchievementRowGroup>(),
+                            Terms = new List<TermDefinition>()
+                        },
                         DocumentXML = GetXml(app, filename)
                     };
-                    klas.Add(kla);
+                    kladocs.Add(kla);
                 }
             }
 
             ((Word._Application)app).Quit();
 
-            foreach (KLA kla in klas)
+            foreach (KLADocument kladoc in kladocs)
             {
-                Console.WriteLine("Processing {0} {1}", kla.YearLevel, kla.Subject);
-                kla.Tables = GetTables(kla.DocumentXML);
+                Console.WriteLine("Processing {0} {1}", kladoc.KLA.YearLevel, kladoc.KLA.Subject);
+                kladoc.Tables = GetTables(kladoc.DocumentXML);
 
-                foreach (Table table in kla.Tables)
+                foreach (WordTable table in kladoc.Tables)
                 {
                     int cols = table.Columns;
                     int rows = table.Rows;
 
                     if (cols >= 7)
                     {
-                        kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
+                        //kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
 
                         for (int r = 2; r < rows; r++)
                         {
-                            List<TableCell> cells = Enumerable.Range(0, cols).Select(c => table.Cells[r, c]).Where(c => c != null).Reverse().ToList();
+                            List<WordTableCell> cells = Enumerable.Range(0, cols).Select(c => table.Cells[r, c]).Where(c => c != null).Reverse().ToList();
                             List<string> groups = cells.Skip(5).Reverse().Select(c => c.Text.Replace("\n", ": ")).ToList();
-                            TableCell[] descs = cells.Take(5).Reverse().ToArray();
-                            Group grp = kla.RootGroup;
+                            WordTableCell[] descs = cells.Take(5).Reverse().ToArray();
+                            AchievementRowGroup grp = new AchievementRowGroup
+                            {
+                                Name = kladoc.KLA.YearLevel + " " + kladoc.KLA.Subject,
+                                Groups = kladoc.KLA.Groups,
+                                Rows = null
+                            };
 
                             foreach (string grpname in groups)
                             {
-                                if (!grp.Groups.ContainsKey(grpname))
+                                AchievementRowGroup subgrp = grp.Groups.SingleOrDefault(g => g.Name == grpname);
+
+                                if (subgrp == null)
                                 {
-                                    grp.Groups[grpname] = new Group();
+                                    subgrp = new AchievementRowGroup
+                                    {
+                                        Name = grpname,
+                                        Groups = new List<AchievementRowGroup>(),
+                                        Rows = new List<AchievementRow>()
+                                    };
+
+                                    grp.Groups.Add(subgrp);
                                 }
 
-                                grp = grp.Groups[grpname];
+                                grp = subgrp;
                             }
 
-                            grp.Descriptors.Add(descs);
+                            grp.Rows.Add(new AchievementRow
+                            {
+                                Descriptors = descs.Select(d => new FormattedText { Elements = d.Paragraphs }).ToList()
+                            });
                         }
                     }
                     else if (cols == 2 && table.Cells[0, 0].Text == "Term")
                     {
                         for (int r = 1; r < rows; r++)
                         {
-                            kla.Definitions.Add(new Tuple<string, TableCell>(table.Cells[r, 0].Text, table.Cells[r, 1]));
+                            kladoc.KLA.Terms.Add(new TermDefinition
+                            {
+                                Keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList(),
+                                Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
+                            });
                         }
                     }
                 }
             }
 
-            foreach (KLA kla in klas)
+            foreach (KLADocument kladoc in kladocs)
             {
-                kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID));
+                kladoc.KLA.ToXDocument().Save(String.Format("{0}-{1}.xml", kladoc.KLA.YearLevelID, kladoc.KLA.SubjectID));
             }
 
             //Recurse(xdoc.Root, 0);
