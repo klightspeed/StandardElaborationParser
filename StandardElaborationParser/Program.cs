@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Word = Microsoft.Office.Interop.Word;
-using Excel = Microsoft.Office.Interop.Excel;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using System.IO;
 using Google.Apis.Drive;
 using Google.GData.Spreadsheets;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using TSVCEO.XmlLasdDatabase;
 
 namespace StandardElaborationParser
@@ -22,7 +23,6 @@ namespace StandardElaborationParser
         public int ColSpan;
         public XElement[] Paragraphs;
         public string Text;
-        public XElement DocumentXML;
 
         public override string ToString()
         {
@@ -55,23 +55,8 @@ namespace StandardElaborationParser
         }
     }
 
-    class WordDocument
-    {
-        public XElement Body { get; set; }
-        public Dictionary<string, XElement> Styles { get; set; }
-    }
-
-    class KLADocument
-    {
-        public List<WordTable> Tables;
-        public WordDocument DocumentXML;
-        public KeyLearningArea KLA;
-    }
-
     class Program
     {
-        static XNamespace ns_xmlPackage = "http://schemas.microsoft.com/office/2006/xmlPackage";
-        static XNamespace ns_wpml = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
         static XNamespace ns_lasd = "http://tempuri.org/XmlLasdDatabase.xsd";
 
         static Dictionary<string, string> YearLevels = new Dictionary<string, string>
@@ -98,259 +83,203 @@ namespace StandardElaborationParser
             { "sci", "Science" }
         };
 
-        static void Recurse(XElement node, int depth)
+        static IEnumerable<XNode> ParagraphContent(Paragraph para, Dictionary<string, Style> styles)
         {
-            Console.WriteLine("{0}<{1}>", new String(' ', depth), node.Name.ToString());
-            foreach (XElement child in node.Elements())
+            foreach (Run run in para.Elements<Run>())
             {
-                Recurse(child, depth + 1);
+                foreach (Text text in run.Elements<Text>())
+                {
+                    yield return new XText(text.Text);
+                }
             }
-            Console.WriteLine("{0}</{1}>", new String(' ', depth), node.Name.ToString());
         }
-
-        static List<XElement> CellContent(XElement wordcell, Dictionary<string, XElement> styles)
+        
+        static IEnumerable<XElement> CellContent(TableCell wordcell, Dictionary<string, Style> styles)
         {
-            List<XElement> output = new List<XElement>();
             XElement list = null;
 
-            foreach (XElement p in wordcell.Elements(ns_wpml + "p"))
+            foreach (Paragraph p in wordcell.Elements<Paragraph>())
             {
-                if (p.Value != "")
+                if (p.InnerText != "")
                 {
-                    string style = "";
-                    XElement ppr = p.Element(ns_wpml + "pPr");
-                    XElement pstyle = ppr.Element(ns_wpml + "pStyle");
-                    if (pstyle != null)
+                    ParagraphProperties paraprops = p.ParagraphProperties;
+                    Style style = null;
+
+                    if (paraprops != null && 
+                        paraprops.ParagraphStyleId != null && 
+                        paraprops.ParagraphStyleId.Val != null && 
+                        styles.ContainsKey(paraprops.ParagraphStyleId.Val))
                     {
-                        XAttribute psval = pstyle.Attribute(ns_wpml + "val");
-                        style = psval.Value;
+                        style = styles[paraprops.ParagraphStyleId.Val];
                     }
 
-                    if (( p.Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0) ||
-                        (styles.ContainsKey(style) && styles[style].Elements(ns_wpml + "pPr").SelectMany(e => e.Elements(ns_wpml + "numPr")).SelectMany(e => e.Elements(ns_wpml + "numId")).Count() != 0))
+                    int numid = 0;
 
+                    if (style != null && 
+                        style.StyleParagraphProperties != null && 
+                        style.StyleParagraphProperties.NumberingProperties != null && 
+                        style.StyleParagraphProperties.NumberingProperties.NumberingId != null &&
+                        style.StyleParagraphProperties.NumberingProperties.NumberingId.Val != null)
+                    {
+                        numid = style.StyleParagraphProperties.NumberingProperties.NumberingId.Val.Value;
+                    }
+
+                    if (paraprops != null &&
+                        paraprops.NumberingProperties != null &&
+                        paraprops.NumberingProperties.NumberingId != null &&
+                        paraprops.NumberingProperties.NumberingId.Val != null)
+                    {
+                        numid = paraprops.NumberingProperties.NumberingId.Val.Value;
+                    }
+
+                    if (numid != 0)
                     {
                         if (list == null)
                         {
                             list = new XElement(ns_lasd + "ul");
                         }
 
-                        list.Add(new XElement(ns_lasd + "li", p.Value));
+                        list.Add(new XElement(ns_lasd + "li", ParagraphContent(p, styles)));
                     }
                     else
                     {
                         if (list != null)
                         {
-                            output.Add(list);
+                            yield return list;
                             list = null;
                         }
 
-                        output.Add(new XElement(ns_lasd + "p", p.Value));
+                        yield return new XElement(ns_lasd + "p", ParagraphContent(p, styles));
                     }
                 }
             }
 
             if (list != null)
             {
-                output.Add(list);
-                list = null;
+                yield return list;
             }
-
-            return output;
         }
 
-        static string CellText(XElement wordcell)
+        static string CellText(XElement[] paragraphs)
         {
             List<string> lines = new List<string>();
 
-            foreach (XElement p in wordcell.Elements(ns_wpml + "p"))
+            foreach (XElement para in paragraphs)
             {
-                string text = p.Value;
-                if (text != "")
+                if (para.Name.LocalName == "p")
                 {
-                    string style = "";
-                    XElement ppr = p.Element(ns_wpml + "pPr");
-                    XElement pstyle = ppr.Element(ns_wpml + "pStyle");
-                    if (pstyle != null)
+                    lines.Add(para.Value);
+                }
+                else if (para.Name.LocalName == "ul")
+                {
+                    foreach (XElement li in para.Elements().Where(el => el.Name.LocalName == "li"))
                     {
-                        XAttribute psval = pstyle.Attribute(ns_wpml + "val");
-                        style = psval.Value;
+                        lines.Add(" • " + li.Value);
                     }
-
-                    if (style == "Tablebullets")
-                    {
-                        text = " • " + text;
-                    }
-
-                    lines.Add(text);
                 }
             }
 
             return String.Join("\n", lines);
         }
 
-        static WordDocument GetXml(Word.Application app, string docfile)
+        static WordTable GetTable(Table tbl, Dictionary<string, Style> styles)
         {
-            string xml;
-            
-            if (File.Exists(docfile + ".xml"))
-            {
-                xml = File.ReadAllText(docfile + ".xml");
-            }
-            else
-            {
-                Word.Document doc = app.Documents.Open(docfile + ".doc");
-                xml = doc.WordOpenXML;
-                ((Word._Document)doc).Close(SaveChanges: false);
-                File.WriteAllText(docfile + ".xml", xml);
-            }
+            WordTable table = new WordTable();
+            TableRow[] tblrows = tbl.Elements<TableRow>().ToArray();
+            int nrcols = tbl.Elements<TableGrid>().Single().Elements<GridColumn>().Count();
+            int nrrows = tblrows.Length;
+            table.Cells = new WordTableCell[nrrows, nrcols];
+            WordTableCell[] columns = new WordTableCell[nrcols];
+            int trno = 0;
 
-            XElement root = XDocument.Parse(xml).Root;
-
-            return new WordDocument
+            foreach (TableRow tblrow in tblrows)
             {
-                Body   = root.Elements(ns_xmlPackage + "part")
-                             .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
-                             .SelectMany(e => e.Elements(ns_wpml + "document"))
-                             .SelectMany(e => e.Elements(ns_wpml + "body"))
-                             .Single(),
-                Styles = root.Elements(ns_xmlPackage + "part")
-                             .SelectMany(e => e.Elements(ns_xmlPackage + "xmlData"))
-                             .SelectMany(e => e.Elements(ns_wpml + "styles"))
-                             .Single()
-                             .Elements(ns_wpml + "style")
-                             .ToDictionary(s => s.Attribute(ns_wpml + "styleId").Value, s => s)
-            };
-        }
+                int tcno = 0;
 
-        static List<WordTable> GetTables(WordDocument doc)
-        {
-            List<WordTable> tables = new List<WordTable>();
-            int tblno = 0;
-            foreach (XElement tbl in doc.Body.Elements(ns_wpml + "tbl"))
-            {
-                //Console.WriteLine(tbl.ToString());
-                WordTable table = new WordTable();
-                XElement[] trs = tbl.Elements(ns_wpml + "tr").ToArray();
-                int nrcols = tbl.Element(ns_wpml + "tblGrid").Elements(ns_wpml + "gridCol").Count();
-                int nrrows = trs.Length;
-                table.Cells = new WordTableCell[nrrows, nrcols];
-                WordTableCell[] columns = new WordTableCell[nrcols];
-                //Console.WriteLine("Table {0}", tblno);
-                int trno = 0;
-                foreach (XElement tr in tbl.Elements(ns_wpml + "tr"))
+                foreach (TableCell tblcell in tblrow.Elements<TableCell>())
                 {
-                    //Console.WriteLine("  Row {0}", trno);
-                    int tcno = 0;
-                    foreach (XElement tc in tr.Elements(ns_wpml + "tc"))
+                    TableCellProperties cellprops = tblcell.Elements<TableCellProperties>().Single();
+                    VerticalMerge vMerge = cellprops.Elements<VerticalMerge>().SingleOrDefault();
+                    bool dovMerge = false;
+
+                    if (vMerge != null && (vMerge.Val == null || vMerge.Val.Value == MergedCellValues.Continue))
                     {
-                        //Console.WriteLine("    Col {0}", tcno);
-                        XElement tcpr = tc.Element(ns_wpml + "tcPr");
-                        XElement vMerge = tcpr.Element(ns_wpml + "vMerge");
-                        bool dovMerge = false;
-
-                        if (vMerge != null && vMerge.Attribute(ns_wpml + "val") == null)
-                        {
-                            dovMerge = true;
-                        }
-
-                        XElement gridSpan = tcpr.Element(ns_wpml + "gridSpan");
-                        int colspan = 1;
-
-                        if (gridSpan != null)
-                        {
-                            colspan = Int32.Parse(gridSpan.Attribute(ns_wpml + "val").Value);
-                        }
-
-                        if (dovMerge)
-                        {
-                            columns[tcno].RowSpan++;
-                            table.Cells[trno, tcno] = columns[tcno];
-                        }
-                        else
-                        {
-                            WordTableCell cell = new WordTableCell
-                            {
-                                Row = trno,
-                                Col = tcno,
-                                RowSpan = 1,
-                                ColSpan = colspan,
-                                Paragraphs = CellContent(tc, doc.Styles).ToArray(),
-                                Text = CellText(tc),
-                                DocumentXML = tc
-                            };
-                            columns[tcno] = cell;
-                            table.Cells[trno, tcno] = cell;
-                        }
-
-                        //Console.WriteLine("      {0}", tcpr.ToString());
-                        tcno += colspan;
+                        dovMerge = true;
                     }
-                    trno++;
+
+                    GridSpan gridSpan = cellprops.Elements<GridSpan>().FirstOrDefault();
+                    int colspan = 1;
+
+                    if (gridSpan != null && gridSpan.Val != null)
+                    {
+                        colspan = gridSpan.Val.Value;
+                    }
+
+                    if (dovMerge)
+                    {
+                        columns[tcno].RowSpan++;
+                        table.Cells[trno, tcno] = columns[tcno];
+                    }
+                    else
+                    {
+                        XElement[] paragraphs = CellContent(tblcell, styles).ToArray();
+                        WordTableCell cell = new WordTableCell
+                        {
+                            Row = trno,
+                            Col = tcno,
+                            RowSpan = 1,
+                            ColSpan = colspan,
+                            Paragraphs = paragraphs,
+                            Text = CellText(paragraphs)
+                        };
+
+                        columns[tcno] = cell;
+                        table.Cells[trno, tcno] = cell;
+                    }
+
+                    tcno += colspan;
                 }
-                tables.Add(table);
-                tblno++;
+                trno++;
             }
 
-            return tables;
+            return table;
         }
 
-        static void Main(string[] args)
+        static KeyLearningArea ProcessKLA(string yearLevel, string yearLevelId, string subject, string subjectId, WordTable[] tables)
         {
-            List<KLADocument> kladocs = new List<KLADocument>();
-            
-            Word.Application app = new Word.Application();
-            
-            foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
+            KeyLearningArea kla = new KeyLearningArea
             {
-                foreach (KeyValuePair<string, string> subject_kvp in Subjects)
-                {
-                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se");
-                    Console.WriteLine("Reading {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
-                    KLADocument kla = new KLADocument
-                    {
-                        KLA = new KeyLearningArea
-                        {
-                            YearLevelID = grade_kvp.Key,
-                            YearLevel = grade_kvp.Value,
-                            SubjectID = subject_kvp.Key,
-                            Subject = subject_kvp.Value,
-                            Groups = new List<AchievementRowGroup>(),
-                            Terms = new List<TermDefinition>()
-                        },
-                        DocumentXML = GetXml(app, filename)
-                    };
-                    kladocs.Add(kla);
-                }
-            }
+                YearLevel = yearLevel,
+                YearLevelID = yearLevelId,
+                Subject = subject,
+                SubjectID = subjectId,
+                Groups = new List<AchievementRowGroup>(),
+                Terms = new List<TermDefinition>()
+            };
 
-            ((Word._Application)app).Quit();
-
-            foreach (KLADocument kladoc in kladocs)
+            foreach (WordTable table in tables)
             {
-                Console.WriteLine("Processing {0} {1}", kladoc.KLA.YearLevel, kladoc.KLA.Subject);
-                kladoc.Tables = GetTables(kladoc.DocumentXML);
+                int cols = table.Columns;
+                int rows = table.Rows;
 
-                foreach (WordTable table in kladoc.Tables)
+                if (cols >= 7)
                 {
-                    int cols = table.Columns;
-                    int rows = table.Rows;
+                    //kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
 
-                    if (cols >= 7)
+                    for (int r = 1; r < rows; r++)
                     {
-                        //kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
+                        List<WordTableCell> cells = Enumerable.Range(0, cols).Select(c => table.Cells[r, c]).Where(c => c != null).Reverse().ToList();
+                        List<string> groups = cells.Skip(5).Reverse().Select(c => c.Text.Replace("\n", " ")).ToList();
+                        WordTableCell[] descs = cells.Take(5).Reverse().ToArray();
 
-                        for (int r = 2; r < rows; r++)
+                        if (descs.Length == 5 && descs.All(d => d.ColSpan == 1 && d.RowSpan == 1))
                         {
-                            List<WordTableCell> cells = Enumerable.Range(0, cols).Select(c => table.Cells[r, c]).Where(c => c != null).Reverse().ToList();
-                            List<string> groups = cells.Skip(5).Reverse().Select(c => c.Text.Replace("\n", ": ")).ToList();
-                            WordTableCell[] descs = cells.Take(5).Reverse().ToArray();
                             AchievementRowGroup grp = new AchievementRowGroup
                             {
-                                Name = kladoc.KLA.YearLevel + " " + kladoc.KLA.Subject,
-                                Groups = kladoc.KLA.Groups,
+                                Name = kla.YearLevel + " " + kla.Subject,
+                                Groups = kla.Groups,
                                 Rows = null,
-                                Id = kladoc.KLA.YearLevelID + "::" + kladoc.KLA.SubjectID + "::"
+                                Id = kla.YearLevelID + "::" + kla.SubjectID + "::"
                             };
 
                             foreach (string grpname in groups)
@@ -380,30 +309,45 @@ namespace StandardElaborationParser
                             });
                         }
                     }
-                    else if (cols == 2 && table.Cells[0, 0].Text == "Term")
+                }
+                else if (cols == 2 && table.Cells[0, 0].Text == "Term")
+                {
+                    for (int r = 1; r < rows; r++)
                     {
-                        for (int r = 1; r < rows; r++)
+                        List<string> keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList();
+                        string name = keywords.FirstOrDefault(k => k.EndsWith("*")) ?? keywords.First();
+                        kla.Terms.Add(new TermDefinition
                         {
-                            List<string> keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList();
-                            string name = keywords.FirstOrDefault(k => k.EndsWith("*")) ?? keywords.First();
-                            kladoc.KLA.Terms.Add(new TermDefinition
-                            {
-                                Name = name.TrimEnd('*'),
-                                Keywords = keywords.Select(k => k.TrimEnd('*')).ToList(),
-                                Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
-                            });
-                        }
+                            Name = name.TrimEnd('*'),
+                            Keywords = keywords.Select(k => k.TrimEnd('*')).ToList(),
+                            Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
+                        });
                     }
                 }
             }
 
-            foreach (KLADocument kladoc in kladocs)
+            return kla;
+        }
+
+        static void Main(string[] args)
+        {
+            foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
             {
-                kladoc.KLA.ToXDocument().Save(String.Format("{0}-{1}.xml", kladoc.KLA.YearLevelID, kladoc.KLA.SubjectID));
+                foreach (KeyValuePair<string, string> subject_kvp in Subjects)
+                {
+                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se");
+                    Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
+
+                    WordprocessingDocument doc = WordprocessingDocument.Open(filename + ".docx", false);
+                    Body body = doc.MainDocumentPart.Document.Body;
+                    Dictionary<string, Style> styles = doc.MainDocumentPart.StyleDefinitionsPart.Styles.Elements<Style>().ToDictionary(s => s.StyleId.Value, s => s);
+                    Table[] tables = body.Elements<Table>().ToArray();
+                    WordTable[] wordtables = tables.Select(t => GetTable(t, styles)).ToArray();
+
+                    KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, wordtables);
+                    kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID));
+                }
             }
-
-            //Recurse(xdoc.Root, 0);
-
         }
     }
 }
