@@ -349,7 +349,8 @@ namespace StandardElaborationParser
                             {
                                 Name = kladoc.KLA.YearLevel + " " + kladoc.KLA.Subject,
                                 Groups = kladoc.KLA.Groups,
-                                Rows = null
+                                Rows = null,
+                                Id = kladoc.KLA.YearLevelID + "::" + kladoc.KLA.SubjectID + "::"
                             };
 
                             foreach (string grpname in groups)
@@ -360,6 +361,7 @@ namespace StandardElaborationParser
                                 {
                                     subgrp = new AchievementRowGroup
                                     {
+                                        Id = grp.Id + (grp.Groups.Count + 1).ToString() + ".",
                                         Name = grpname,
                                         Groups = new List<AchievementRowGroup>(),
                                         Rows = new List<AchievementRow>()
@@ -373,7 +375,8 @@ namespace StandardElaborationParser
 
                             grp.Rows.Add(new AchievementRow
                             {
-                                Descriptors = descs.Select(d => new FormattedText { Elements = d.Paragraphs }).ToList()
+                                Descriptors = descs.Select(d => new FormattedText { Elements = d.Paragraphs }).ToList(),
+                                Id = grp.Id + (grp.Rows.Count + 1).ToString()
                             });
                         }
                     }
@@ -381,9 +384,12 @@ namespace StandardElaborationParser
                     {
                         for (int r = 1; r < rows; r++)
                         {
+                            List<string> keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList();
+                            string name = keywords.FirstOrDefault(k => k.EndsWith("*")) ?? keywords.First();
                             kladoc.KLA.Terms.Add(new TermDefinition
                             {
-                                Keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList(),
+                                Name = name.TrimEnd('*'),
+                                Keywords = keywords.Select(k => k.TrimEnd('*')).ToList(),
                                 Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
                             });
                         }
