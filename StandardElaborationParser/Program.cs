@@ -245,6 +245,98 @@ namespace StandardElaborationParser
             return table;
         }
 
+        static XElement FindTerms(XElement element, Dictionary<string, string> terms)
+        {
+            XElement ret = new XElement(element.Name, element.Attributes());
+
+            foreach (XNode node in element.Nodes())
+            {
+                if (node is XElement)
+                {
+                    ret.Add(FindTerms((XElement)node, terms));
+                }
+                else if (node is XText)
+                {
+                    string text = ((XText)node).Value;
+                    string lowertext = text.ToLower();
+                    int startpos = 0;
+
+                    do
+                    {
+                        int matchpos = text.Length;
+                        int matchlen = 0;
+                        string matchname = null;
+
+                        foreach (KeyValuePair<string, string> term in terms)
+                        {
+                            int tmatchpos = lowertext.IndexOf(term.Key, startpos);
+
+                            if (tmatchpos >= startpos && 
+                                (tmatchpos < matchpos ||
+                                 (tmatchpos == matchpos && term.Key.Length > matchlen)))
+                            {
+                                matchpos = tmatchpos;
+                                matchlen = term.Key.Length;
+                                matchname = term.Value;
+                            }
+                        }
+
+                        if (matchlen != 0)
+                        {
+                            if (matchpos != startpos)
+                            {
+                                ret.Add(new XText(text.Substring(startpos, matchpos - startpos)));
+                            }
+
+                            ret.Add(new XElement(ns_lasd + "term",
+                                new XAttribute("name", matchname),
+                                new XText(text.Substring(matchpos, matchlen))
+                            ));
+                        }
+                        else
+                        {
+                            ret.Add(new XText(text.Substring(startpos, text.Length - startpos)));
+                        }
+
+                        startpos = matchpos + matchlen;
+                    }
+                    while (startpos < text.Length);
+                }
+                else
+                {
+                    ret.Add(node);
+                }
+            }
+
+            return ret;
+        }
+
+        static void FindTerms(AchievementRowGroup group, Dictionary<string, string> terms)
+        {
+            foreach (AchievementRowGroup grp in group.Groups)
+            {
+                FindTerms(grp, terms);
+            }
+
+            foreach (AchievementRow row in group.Rows)
+            {
+                foreach (FormattedText text in row.Descriptors)
+                {
+                    text.Elements = text.Elements.Select(e => FindTerms(e, terms)).ToArray();
+                }
+            }
+        }
+
+        static void FindTerms(KeyLearningArea kla)
+        {
+            Dictionary<string, string> terms = kla.Terms.SelectMany(t => t.Keywords.Select(k => new { keyword = k.ToLower(), name = t.Name })).ToDictionary(kn => kn.keyword, kn => kn.name);
+
+            foreach (AchievementRowGroup group in kla.Groups)
+            {
+                FindTerms(group, terms);
+            }
+        }
+
         static KeyLearningArea ProcessKLA(string yearLevel, string yearLevelId, string subject, string subjectId, WordTable[] tables)
         {
             KeyLearningArea kla = new KeyLearningArea
@@ -315,16 +407,28 @@ namespace StandardElaborationParser
                     for (int r = 1; r < rows; r++)
                     {
                         List<string> keywords = table.Cells[r, 0].Text.Split(',', ';').Select(k => k.Trim().Replace('\xA0', ' ')).ToList();
-                        string name = keywords.FirstOrDefault(k => k.EndsWith("*")) ?? keywords.First();
-                        kla.Terms.Add(new TermDefinition
+                        string name = (keywords.FirstOrDefault(k => k.EndsWith("*")) ?? keywords.First()).ToLower();
+                        XElement[] elements = table.Cells[r, 1].Paragraphs;
+
+                        if (name == "")
                         {
-                            Name = name.TrimEnd('*'),
-                            Keywords = keywords.Select(k => k.TrimEnd('*')).ToList(),
-                            Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
-                        });
+                            TermDefinition term = kla.Terms[kla.Terms.Count - 1];
+                            term.Description.Elements = term.Description.Elements.Concat(elements).ToArray();
+                        }
+                        else
+                        {
+                            kla.Terms.Add(new TermDefinition
+                            {
+                                Name = name.TrimEnd('*'),
+                                Keywords = keywords.Select(k => k.TrimEnd('*')).ToList(),
+                                Description = new FormattedText { Elements = table.Cells[r, 1].Paragraphs }
+                            });
+                        }
                     }
                 }
             }
+
+            FindTerms(kla);
 
             return kla;
         }
