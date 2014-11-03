@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,14 +7,12 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using System.IO;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 using TSVCEO.XmlLasdDatabase;
+using Ionic.Zip;
 
 namespace StandardElaborationParser
 {
-    class WordTableCell
+    public class WordTableCell
     {
         public int Row;
         public int Col;
@@ -51,7 +50,7 @@ namespace StandardElaborationParser
         }
     }
 
-    class WordTable
+    public class WordTable
     {
         public int Columns { get { return Cells.GetLength(1); } }
         public int Rows { get { return Cells.GetLength(0); } }
@@ -76,7 +75,7 @@ namespace StandardElaborationParser
         }
     }
 
-    class Program
+    public class Program
     {
         private static XNamespace ns_lasd = "http://tempuri.org/XmlLasdDatabase.xsd";
 
@@ -104,53 +103,46 @@ namespace StandardElaborationParser
             { "sci", "Science" }
         };
 
-        private static IEnumerable<XNode> ParagraphContent(Paragraph para, Dictionary<string, Style> styles)
+        private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
-            foreach (Run run in para.Elements<Run>())
+            foreach (XElement run in para.Elements(xmlns.w + "r"))
             {
-                foreach (Text text in run.Elements<Text>())
+                foreach (XElement text in run.Elements(xmlns.w + "t"))
                 {
-                    yield return new XText(text.Text);
+                    yield return new XText(text.Value);
                 }
             }
         }
         
-        private static IEnumerable<XElement> CellContent(TableCell wordcell, Dictionary<string, Style> styles)
+        private static IEnumerable<XElement> CellContent(XElement wordcell, Dictionary<string, XElement> styles)
         {
             XElement list = null;
 
-            foreach (Paragraph p in wordcell.Elements<Paragraph>())
+            foreach (XElement p in wordcell.Elements(xmlns.w + "p"))
             {
-                if (p.InnerText != "")
+                if (p.Value != "")
                 {
-                    ParagraphProperties paraprops = p.ParagraphProperties;
-                    Style style = null;
+                    XElement paraprops = p.Element(xmlns.w + "pPr");
+                    XElement style = null;
 
                     if (paraprops != null && 
-                        paraprops.ParagraphStyleId != null && 
-                        paraprops.ParagraphStyleId.Val != null && 
-                        styles.ContainsKey(paraprops.ParagraphStyleId.Val))
+                        paraprops.Elements(xmlns.w + "pStyle").Select(ps => ps.Attribute(xmlns.w + "val")).Any(ps => styles.ContainsKey(ps.Value)))
                     {
-                        style = styles[paraprops.ParagraphStyleId.Val];
+                        style = styles[paraprops.Element(xmlns.w + "pStyle").Attribute(xmlns.w + "val").Value];
                     }
 
                     int numid = 0;
 
                     if (style != null && 
-                        style.StyleParagraphProperties != null && 
-                        style.StyleParagraphProperties.NumberingProperties != null && 
-                        style.StyleParagraphProperties.NumberingProperties.NumberingId != null &&
-                        style.StyleParagraphProperties.NumberingProperties.NumberingId.Val != null)
+                        style.Elements(xmlns.w + "pPr").SelectMany(ppr => ppr.Elements(xmlns.w + "numPr")).SelectMany(npr => npr.Elements(xmlns.w + "numId")).Any(nid => nid.Attribute(xmlns.w + "val") != null))
                     {
-                        numid = style.StyleParagraphProperties.NumberingProperties.NumberingId.Val.Value;
+                        Int32.TryParse(style.Element(xmlns.w + "pPr").Element(xmlns.w + "numPr").Element(xmlns.w + "numId").Attribute(xmlns.w + "val").Value, out numid);
                     }
 
                     if (paraprops != null &&
-                        paraprops.NumberingProperties != null &&
-                        paraprops.NumberingProperties.NumberingId != null &&
-                        paraprops.NumberingProperties.NumberingId.Val != null)
+                        paraprops.Elements(xmlns.w + "numPr").SelectMany(npr => npr.Elements(xmlns.w + "numId")).Any(nid => nid.Attribute(xmlns.w + "val") != null))
                     {
-                        numid = paraprops.NumberingProperties.NumberingId.Val.Value;
+                        Int32.TryParse(paraprops.Element(xmlns.w + "numPr").Element(xmlns.w + "numId").Attribute(xmlns.w + "val").Value, out numid);
                     }
 
                     if (numid != 0)
@@ -181,37 +173,37 @@ namespace StandardElaborationParser
             }
         }
 
-        private static WordTable GetTable(Table tbl, Dictionary<string, Style> styles)
+        private static WordTable GetTable(XElement tbl, Dictionary<string, XElement> styles)
         {
             WordTable table = new WordTable();
-            TableRow[] tblrows = tbl.Elements<TableRow>().ToArray();
-            int nrcols = tbl.Elements<TableGrid>().Single().Elements<GridColumn>().Count();
+            XElement[] tblrows = tbl.Elements(xmlns.w + "tr").ToArray();
+            int nrcols = tbl.Element(xmlns.w + "tblGrid").Elements(xmlns.w + "gridCol").Count();
             int nrrows = tblrows.Length;
             table.Cells = new WordTableCell[nrrows, nrcols];
             WordTableCell[] columns = new WordTableCell[nrcols];
             int trno = 0;
 
-            foreach (TableRow tblrow in tblrows)
+            foreach (XElement tblrow in tblrows)
             {
                 int tcno = 0;
 
-                foreach (TableCell tblcell in tblrow.Elements<TableCell>())
+                foreach (XElement tblcell in tblrow.Elements(xmlns.w + "tc"))
                 {
-                    TableCellProperties cellprops = tblcell.Elements<TableCellProperties>().Single();
-                    VerticalMerge vMerge = cellprops.Elements<VerticalMerge>().SingleOrDefault();
+                    XElement cellprops = tblcell.Element(xmlns.w + "tcPr");
+                    XElement vMerge = cellprops.Element(xmlns.w + "vMerge");
                     bool dovMerge = false;
 
-                    if (vMerge != null && (vMerge.Val == null || vMerge.Val.Value == MergedCellValues.Continue))
+                    if (vMerge != null && !vMerge.Attributes(xmlns.w + "val").Any(v => v.Value == "restart"))
                     {
                         dovMerge = true;
                     }
 
-                    GridSpan gridSpan = cellprops.Elements<GridSpan>().FirstOrDefault();
+                    XElement gridSpan = cellprops.Element(xmlns.w + "gridSpan");
                     int colspan = 1;
 
-                    if (gridSpan != null && gridSpan.Val != null)
+                    if (gridSpan != null && gridSpan.Attribute(xmlns.w + "val") != null)
                     {
-                        colspan = gridSpan.Val.Value;
+                        Int32.TryParse(gridSpan.Attribute(xmlns.w + "val").Value, out colspan);
                     }
 
                     if (dovMerge)
@@ -348,10 +340,12 @@ namespace StandardElaborationParser
                     string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se.docx");
                     Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
 
-                    WordprocessingDocument doc = WordprocessingDocument.Open(filename, false);
-                    Body body = doc.MainDocumentPart.Document.Body;
-                    Dictionary<string, Style> styles = doc.MainDocumentPart.StyleDefinitionsPart.Styles.Elements<Style>().ToDictionary(s => s.StyleId.Value, s => s);
-                    Table[] tables = body.Elements<Table>().ToArray();
+                    Package pkg = Package.Load(filename);
+                    PackageFile docpart = pkg.GetRelation(PackageRelation.officeDocument);
+                    PackageFile stylespart = docpart.GetRelation(PackageRelation.styles);
+                    XElement body = docpart.XmlDocument.Root.Element(xmlns.w + "body");
+                    Dictionary<string, XElement> styles = stylespart.XmlDocument.Root.Elements(xmlns.w + "style").ToDictionary(s => s.Attribute(xmlns.w + "styleId").Value, s => s);
+                    XElement[] tables = body.Elements(xmlns.w + "tbl").ToArray();
                     WordTable[] wordtables = tables.Select(t => GetTable(t, styles)).ToArray();
 
                     KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, wordtables);
