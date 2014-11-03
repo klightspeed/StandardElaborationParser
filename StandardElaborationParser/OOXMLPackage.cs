@@ -73,19 +73,21 @@ namespace StandardElaborationParser
                 string type = relation.Attribute("Type").Value;
                 string targetname = relation.Attribute("Target").Value;
                 string targetmode = relation.Attributes("TargetMode").Select(a => a.Value).SingleOrDefault();
+                PackageFile target = null;
 
                 if (targetmode != "External")
                 {
-                    PackageFile target = this.Parent[targetname] as PackageFile;
-
-                    relations.Add(new PackageRelation
-                    {
-                        Id = id,
-                        Type = type,
-                        TargetName = targetname,
-                        Target = target
-                    });
+                    target = this.Parent[targetname] as PackageFile;
                 }
+
+                relations.Add(new PackageRelation
+                {
+                    Id = id,
+                    Type = type,
+                    TargetName = targetname,
+                    Target = target,
+                    IsExternal = targetmode == "External"
+                });
             }
 
             this.Relations = relations.ToArray();
@@ -279,7 +281,7 @@ namespace StandardElaborationParser
                 {
                     return _Data;
                 }
-                else if (_XmlDocument != null)
+                else
                 {
                     using (MemoryStream stream = new MemoryStream())
                     {
@@ -290,10 +292,6 @@ namespace StandardElaborationParser
                         }
                         return stream.ToArray();
                     }
-                }
-                else
-                {
-                    throw new InvalidOperationException();
                 }
             }
             set
@@ -475,6 +473,7 @@ namespace StandardElaborationParser
         public string Type { get; set; }
         public string TargetName { get; set; }
         public PackageFile Target { get; set; }
+        public bool IsExternal { get; set; }
 
         public static string stylesWithEffects = "http://schemas.microsoft.com/office/2007/relationships/stylesWithEffects";
         public static string customXml = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/customXml";
