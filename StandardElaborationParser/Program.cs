@@ -8,10 +8,16 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using System.IO;
 using TSVCEO.XmlLasdDatabase;
+using TSVCEO.OOXML.Packaging;
 using Ionic.Zip;
 
 namespace StandardElaborationParser
 {
+    public class xmlns
+    {
+        public static readonly XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    }
+
     public class WordTableCell
     {
         public int Row;

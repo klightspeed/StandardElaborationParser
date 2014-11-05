@@ -51,7 +51,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OOXMLPackage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -60,6 +59,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\OOXML\OOXML.csproj">
+      <Project>{B3468B70-D98D-4F29-9C0C-BAAABC0066C6}</Project>
+      <Name>OOXML</Name>
+    </ProjectReference>
     <ProjectReference Include="..\XmlLasdDatabase\XmlLasdDatabase.csproj">
       <Project>{B8306064-453D-4078-BCF8-CFD0201CF0FB}</Project>
       <Name>XmlLasdDatabase</Name>
