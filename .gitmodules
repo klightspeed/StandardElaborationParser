@@ -4,3 +4,7 @@
 [submodule "OOXML"]
 	path = OOXML
 	url = https://github.com/klightspeed/OOXML.git
+[submodule "StandardElaborationParser"]
+	path = StandardElaborationParser
+	url = https://github.com/klightspeed/StandardElaborationParser.git
+	branch = program
