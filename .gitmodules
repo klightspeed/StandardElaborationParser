@@ -1,6 +1,0 @@
-[submodule "XmlLasdDatabase"]
-	path = XmlLasdDatabase
-	url = https://github.com/klightspeed/XmlLasdDatabase.git
-[submodule "OOXML"]
-	path = OOXML
-	url = https://github.com/klightspeed/OOXML.git
