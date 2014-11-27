@@ -16,6 +16,8 @@ namespace StandardElaborationParser
     public class xmlns
     {
         public static readonly XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+        public static readonly XNamespace dcterms = "http://purl.org/dc/terms/";
+        public static readonly XNamespace cp = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     }
 
     public class WordTableCell
@@ -370,6 +372,26 @@ namespace StandardElaborationParser
             return kla;
         }
 
+        private static string GetDocVersion(Package pkg)
+        {
+            PackageFile corepropspart = pkg.GetRelation(PackageRelation.coreProperties);
+            XElement coreprops = corepropspart.XmlDocument.Root;
+            return coreprops.Elements(xmlns.dcterms + "modified").Select(e => e.Value).SingleOrDefault();
+        }
+
+        private static KeyLearningArea ProcessKLA(string yearLevel, string yearLevelId, string subject, string subjectId, Package pkg)
+        {
+            PackageFile docpart = pkg.GetRelation(PackageRelation.officeDocument);
+            PackageFile stylespart = docpart.GetRelation(PackageRelation.styles);
+            XElement body = docpart.XmlDocument.Root.Element(xmlns.w + "body");
+            Dictionary<string, XElement> styles = stylespart.XmlDocument.Root.Elements(xmlns.w + "style").ToDictionary(s => s.Attribute(xmlns.w + "styleId").Value, s => s);
+            XElement[] tables = body.Elements(xmlns.w + "tbl").ToArray();
+            WordTable[] wordtables = tables.Select(t => GetTable(t, styles)).ToArray();
+            KeyLearningArea kla = ProcessKLA(yearLevel, yearLevelId, subject, subjectId, wordtables);
+            kla.Version = GetDocVersion(pkg);
+            return kla;
+        }
+
         private static void Main(string[] args)
         {
             GradeList gradelist = new GradeList { Grades = new List<Grade>() };
@@ -390,21 +412,15 @@ namespace StandardElaborationParser
                     Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
 
                     Package pkg = Package.Load(filename);
-                    PackageFile docpart = pkg.GetRelation(PackageRelation.officeDocument);
-                    PackageFile stylespart = docpart.GetRelation(PackageRelation.styles);
-                    XElement body = docpart.XmlDocument.Root.Element(xmlns.w + "body");
-                    Dictionary<string, XElement> styles = stylespart.XmlDocument.Root.Elements(xmlns.w + "style").ToDictionary(s => s.Attribute(xmlns.w + "styleId").Value, s => s);
-                    XElement[] tables = body.Elements(xmlns.w + "tbl").ToArray();
-                    WordTable[] wordtables = tables.Select(t => GetTable(t, styles)).ToArray();
-
-                    KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, wordtables);
+                    KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, pkg);
                     string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
 
                     grade.KLAs.Add(new KeyLearningAreaReference
                     {
                         SubjectID = kla.SubjectID,
                         Subject = kla.Subject,
-                        Filename = xmlname
+                        Filename = xmlname,
+                        Version = kla.Version
                     });
 
                     kla.ToXDocument().Save(xmlname);
