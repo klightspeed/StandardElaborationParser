@@ -109,6 +109,39 @@ namespace StandardElaborationParser
             { "sci", "Science" }
         };
 
+        private static Dictionary<string, Dictionary<string, string>> AchievementLevels = new Dictionary<string, Dictionary<string, string>>
+        {
+            { "p-2", new Dictionary<string, string> {
+                { "AP", "Applying" },
+                { "MC", "Making Connections" },
+                { "WW", "Working With" },
+                { "EX", "Exploring" },
+                { "BA", "Becoming Aware" }
+            } },
+            { "3-10", new Dictionary<string, string> {
+                { "A", "A" },
+                { "B", "B" },
+                { "C", "C" },
+                { "D", "D" },
+                { "E", "E" }
+            } }
+        };
+
+        private static Dictionary<string, string> GradeAchievementLevelRefs = new Dictionary<string, string>
+        {
+            { "prep", "p-2" },
+            { "yr1", "p-2" },
+            { "yr2", "p-2" },
+            { "yr3", "3-10" },
+            { "yr4", "3-10" },
+            { "yr5", "3-10" },
+            { "yr6", "3-10" },
+            { "yr7", "3-10" },
+            { "yr8", "3-10" },
+            { "yr9", "3-10" },
+            { "yr10", "3-10" }
+        };
+
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
             foreach (XElement run in para.Elements(xmlns.w + "r"))
@@ -339,8 +372,18 @@ namespace StandardElaborationParser
 
         private static void Main(string[] args)
         {
+            GradeList gradelist = new GradeList { Grades = new List<Grade>() };
+
             foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
             {
+                Grade grade = new Grade
+                {
+                    YearLevelID = grade_kvp.Key,
+                    YearLevel = grade_kvp.Value,
+                    Levels = AchievementLevels[GradeAchievementLevelRefs[grade_kvp.Key]].Select(kvp => new AchievementLevel { Abbreviation = kvp.Key, Name = kvp.Value }).ToList(),
+                    KLAs = new List<KeyLearningAreaReference>()
+                };
+
                 foreach (KeyValuePair<string, string> subject_kvp in Subjects)
                 {
                     string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se.docx");
@@ -355,9 +398,22 @@ namespace StandardElaborationParser
                     WordTable[] wordtables = tables.Select(t => GetTable(t, styles)).ToArray();
 
                     KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, wordtables);
-                    kla.ToXDocument().Save(String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID));
+                    string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
+
+                    grade.KLAs.Add(new KeyLearningAreaReference
+                    {
+                        SubjectID = kla.SubjectID,
+                        Subject = kla.Subject,
+                        Filename = xmlname
+                    });
+
+                    kla.ToXDocument().Save(xmlname);
                 }
+
+                gradelist.Grades.Add(grade);
             }
+
+            gradelist.ToXDocument().Save("grades.xml");
         }
     }
 }
