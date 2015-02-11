@@ -304,7 +304,7 @@ namespace StandardElaborationParser
                         List<string> groups = cells.Skip(5).Reverse().Select(c => c.Text.Replace("\n", " ")).ToList();
                         WordTableCell[] descs = cells.Take(5).Reverse().ToArray();
 
-                        if (descs.Length == 5 && descs.All(d => d.ColSpan == 1 && d.RowSpan == 1))
+                        if (descs.Length == 5 && descs.Aggregate((int?)null, (a,d) => (a == null || d.RowSpan == a) ? d.RowSpan : -1) >= 1)
                         {
                             AchievementRowGroup grp = new AchievementRowGroup
                             {
