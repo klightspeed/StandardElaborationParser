@@ -108,7 +108,8 @@ namespace StandardElaborationParser
             { "math", "Mathematics" },
             { "geog", "Geography" },
             { "hist", "History" },
-            { "sci", "Science" }
+            { "sci", "Science" },
+            { "hpe", "Health and Physical Education" }
         };
 
         private static Dictionary<string, Dictionary<string, string>> AchievementLevels = new Dictionary<string, Dictionary<string, string>>
