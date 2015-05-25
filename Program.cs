@@ -109,7 +109,13 @@ namespace StandardElaborationParser
             { "geog", "Geography" },
             { "hist", "History" },
             { "sci", "Science" },
-            { "hpe", "Health and Physical Education" }
+            { "hpe", "Health and Physical Education" },
+            { "enb", "Economics and Business" },
+            { "arts_dance", "The Arts: Dance" },
+            { "arts_drama", "The Arts: Drama" },
+            { "arts_media", "The Arts: Media Arts" },
+            { "arts_music", "The Arts: Music" },
+            { "arts_visual", "The Arts: Visual Arts" }
         };
 
         private static Dictionary<string, Dictionary<string, string>> AchievementLevels = new Dictionary<string, Dictionary<string, string>>
@@ -410,21 +416,25 @@ namespace StandardElaborationParser
                 foreach (KeyValuePair<string, string> subject_kvp in Subjects)
                 {
                     string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se.docx");
-                    Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
 
-                    Package pkg = Package.Load(filename);
-                    KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, pkg);
-                    string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
-
-                    grade.KLAs.Add(new KeyLearningAreaReference
+                    if (File.Exists(filename))
                     {
-                        SubjectID = kla.SubjectID,
-                        Subject = kla.Subject,
-                        Filename = xmlname,
-                        Version = kla.Version
-                    });
+                        Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
 
-                    kla.ToXDocument().Save(xmlname);
+                        Package pkg = Package.Load(filename);
+                        KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, pkg);
+                        string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
+
+                        grade.KLAs.Add(new KeyLearningAreaReference
+                        {
+                            SubjectID = kla.SubjectID,
+                            Subject = kla.Subject,
+                            Filename = xmlname,
+                            Version = kla.Version
+                        });
+
+                        kla.ToXDocument().Save(xmlname);
+                    }
                 }
 
                 gradelist.Grades.Add(grade);
