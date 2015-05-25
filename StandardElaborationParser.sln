@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OOXML", "OOXML\OOXML.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LASDDatabase", "LASDDatabase\LASDDatabase.csproj", "{CAE8DD7D-F4E4-47DA-A02D-7961937A8D45}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XmlLasdDatabaseGenerator", "XmlLasdDatabaseGenerator\XmlLasdDatabaseGenerator.csproj", "{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		{CAE8DD7D-F4E4-47DA-A02D-7961937A8D45}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAE8DD7D-F4E4-47DA-A02D-7961937A8D45}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CAE8DD7D-F4E4-47DA-A02D-7961937A8D45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
