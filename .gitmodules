@@ -10,5 +10,4 @@
 	branch = program
 [submodule "LASDDatabase"]
 	path = LASDDatabase
-	url = https://github.com/klightspeed/XmlLasdDatabase
-	branch = LASDDatabase
+	url = https://github.com/klightspeed/LASDDatabase
