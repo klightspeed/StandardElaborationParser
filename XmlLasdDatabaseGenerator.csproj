@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{711B7FEF-182A-47FF-8E2E-E26A4580FBA2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>XmlLasdDatabaseGenerator</RootNamespace>
+    <AssemblyName>XmlLasdDatabaseGenerator</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StandardElaborationParser\StandardElaborationParser.csproj">
+      <Project>{D0B2FCCB-41E8-45E1-BC43-AFE8627C17CA}</Project>
+      <Name>StandardElaborationParser</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="StandardElaborations\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <UsingTask TaskName="DownloadFile" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+    <ParameterGroup>
+      <Address ParameterType="System.String" Required="true" />
+      <FileName ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="System" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+            new System.Net.WebClient().DownloadFile(Address, FileName);
+        ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="BeforeBuild">
+    <ItemGroup>
+      <YearLevel Include="prep" />
+      <YearLevel Include="yr1" />
+      <YearLevel Include="yr2" />
+      <YearLevel Include="yr3" />
+      <YearLevel Include="yr4" />
+      <YearLevel Include="yr5" />
+      <YearLevel Include="yr6" />
+      <YearLevel Include="yr7" />
+      <YearLevel Include="yr8" />
+      <YearLevel Include="yr9" />
+      <YearLevel Include="yr10" />
+    </ItemGroup>
+    <ItemGroup>
+      <YearLevelGroup_p_2 Include="prep" />
+      <YearLevelGroup_p_2 Include="yr1" />
+      <YearLevelGroup_p_2 Include="yr2" />
+      <YearLevelGroup_prep Include="prep" />
+      <YearLevelGroup_1_2 Include="yr1" />
+      <YearLevelGroup_1_2 Include="yr2" />
+      <YearLevelGroup_3_4 Include="yr3" />
+      <YearLevelGroup_3_4 Include="yr4" />
+      <YearLevelGroup_5_6 Include="yr5" />
+      <YearLevelGroup_5_6 Include="yr6" />
+      <YearLevelGroup_7_8 Include="yr7" />
+      <YearLevelGroup_7_8 Include="yr8" />
+      <YearLevelGroup_9_10 Include="yr9" />
+      <YearLevelGroup_9_10 Include="yr10" />
+    </ItemGroup>
+    <ItemGroup>
+      <ENBYearLevel Include="yr5" />
+      <ENBYearLevel Include="yr6" />
+      <ENBYearLevel Include="yr7" />
+      <ENBYearLevel Include="yr8" />
+      <ENBYearLevel Include="yr9" />
+      <ENBYearLevel Include="yr10" />
+    </ItemGroup>
+    <ItemGroup>
+      <KeyLearningArea Include="eng" />
+      <KeyLearningArea Include="geog" />
+      <KeyLearningArea Include="hist" />
+      <KeyLearningArea Include="math" />
+      <KeyLearningArea Include="sci" />
+    </ItemGroup>
+    <ItemGroup>
+      <ArtsKeyLearningArea Include="arts_dance" />
+      <ArtsKeyLearningArea Include="arts_drama" />
+      <ArtsKeyLearningArea Include="arts_media" />
+      <ArtsKeyLearningArea Include="arts_music" />
+    </ItemGroup>
+    <ItemGroup>
+      <YearLevelKLA Include="@(YearLevel)">
+        <KLA>%(KeyLearningArea.Identity)</KLA>
+      </YearLevelKLA>
+      <YearLevelKLA Include="@(ENBYearLevel)">
+        <KLA>enb</KLA>
+      </YearLevelKLA>
+      <YearLevelKLA_p_2 Include="@(YearLevelGroup_p_2)">
+        <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
+      </YearLevelKLA_p_2>
+      <YearLevelKLA_3_4 Include="@(YearLevelGroup_3_4)">
+        <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
+      </YearLevelKLA_3_4>
+      <YearLevelKLA_5_6 Include="@(YearLevelGroup_5_6)">
+        <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
+      </YearLevelKLA_5_6>
+      <YearLevelKLA_7_8 Include="@(YearLevelGroup_7_8)">
+        <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
+      </YearLevelKLA_7_8>
+      <YearLevelKLA_9_10 Include="@(YearLevelGroup_9_10)">
+        <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
+      </YearLevelKLA_9_10>
+      <YearLevelKLA_prep Include="@(YearLevelGroup_prep)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_prep>
+      <YearLevelKLA_1_2 Include="@(YearLevelGroup_1_2)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_1_2>
+      <YearLevelKLA_3_4 Include="@(YearLevelGroup_3_4)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_3_4>
+      <YearLevelKLA_5_6 Include="@(YearLevelGroup_5_6)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_5_6>
+      <YearLevelKLA_7_8 Include="@(YearLevelGroup_7_8)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_7_8>
+      <YearLevelKLA_9_10 Include="@(YearLevelGroup_9_10)">
+        <KLA>hpe</KLA>
+      </YearLevelKLA_9_10>
+    </ItemGroup>
+    <ItemGroup>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA.KLA)_%(YearLevelKLA.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA.KLA)_%(YearLevelKLA.Identity)_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_prep.KLA)_%(YearLevelKLA_prep.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_prep.KLA)_prep_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_p_2.KLA)_%(YearLevelKLA_p_2.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_p_2.KLA)_p2_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_1_2.KLA)_%(YearLevelKLA_1_2.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_1_2.KLA)_yr1-2_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_3_4.KLA)_%(YearLevelKLA_3_4.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_3_4.KLA)_yr3-4_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_5_6.KLA)_%(YearLevelKLA_5_6.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_5_6.KLA)_yr5-6_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_7_8.KLA)_%(YearLevelKLA_7_8.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_7_8.KLA)_yr7-8_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaboration Include="StandardElaborations\ac_%(YearLevelKLA_9_10.KLA)_%(YearLevelKLA_9_10.Identity)_se.docx">
+        <SourceURL>https://www.qcaa.qld.edu.au/downloads/p_10/ac_%(YearLevelKLA_9_10.KLA)_yr9-10_se.docx</SourceURL>
+      </StandardElaboration>
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA.Identity)-%(YearLevelKLA.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_prep.Identity)-%(YearLevelKLA_prep.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_p_2.Identity)-%(YearLevelKLA_p_2.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_1_2.Identity)-%(YearLevelKLA_1_2.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_3_4.Identity)-%(YearLevelKLA_3_4.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_5_6.Identity)-%(YearLevelKLA_5_6.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_7_8.Identity)-%(YearLevelKLA_7_8.KLA).xml" />
+      <StandardElaborationXML Include="StandardElaborations\%(YearLevelKLA_9_10.Identity)-%(YearLevelKLA_9_10.KLA).xml" />
+    </ItemGroup>
+    <DownloadFile Address="%(StandardElaboration.SourceURL)" Filename="%(StandardElaboration.Identity)" Condition="!Exists('%(StandardElaboration.Identity)')" />
+  </Target>
+  <Target Name="AfterBuild">
+    <Exec Command="$(MSBuildProjectDirectory)\$(OutputPath)StandardElaborationParser.exe"
+          WorkingDirectory="$(MSBuildProjectDirectory)\StandardElaborations" />
+    <Copy SourceFiles="@(StandardElaborationXML)" DestinationFolder="..\StandardElaborations" />
+    <Copy SourceFiles="StandardElaborations\grades.xml" DestinationFolder="..\StandardElaborations" />
+  </Target>
+  <Target Name="AfterClean">
+    <Exec Command="del StandardElaborations\*.xml" />
+  </Target>
+  <Target Name="DistClean">
+    <Exec Command="del StandardElaborations\*.docx" />
+  </Target>
+</Project>
