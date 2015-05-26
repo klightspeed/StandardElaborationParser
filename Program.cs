@@ -153,11 +153,21 @@ namespace StandardElaborationParser
 
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
-            foreach (XElement run in para.Elements(xmlns.w + "r"))
+            foreach (XElement el in para.Elements())
             {
-                foreach (XElement text in run.Elements(xmlns.w + "t"))
+                if (el.Name == xmlns.w + "r")
                 {
-                    yield return new XText(text.Value);
+                    foreach (XElement text in el.Elements(xmlns.w + "t"))
+                    {
+                        yield return new XText(text.Value);
+                    }
+                }
+                else if (el.Name == xmlns.w + "hyperlink")
+                {
+                    foreach (XNode node in ParagraphContent(el, styles))
+                    {
+                        yield return node;
+                    }
                 }
             }
         }
