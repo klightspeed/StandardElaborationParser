@@ -440,7 +440,8 @@ namespace StandardElaborationParser
                             SubjectID = kla.SubjectID,
                             Subject = kla.Subject,
                             Filename = xmlname,
-                            Version = kla.Version
+                            Version = kla.Version,
+                            Hash = kla.GetHash()
                         });
 
                         kla.ToXDocument().Save(xmlname);
