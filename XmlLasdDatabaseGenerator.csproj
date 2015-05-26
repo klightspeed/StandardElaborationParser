@@ -108,6 +108,7 @@
       <ArtsKeyLearningArea Include="arts_drama" />
       <ArtsKeyLearningArea Include="arts_media" />
       <ArtsKeyLearningArea Include="arts_music" />
+      <ArtsKeyLearningArea Include="arts_visual" />
     </ItemGroup>
     <ItemGroup>
       <YearLevelKLA Include="@(YearLevel)">
