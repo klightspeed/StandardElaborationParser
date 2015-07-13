@@ -111,11 +111,14 @@ namespace StandardElaborationParser
             { "sci", "Science" },
             { "hpe", "Health and Physical Education" },
             { "enb", "Economics and Business" },
+            { "cnc", "Civics and Citizenship" },
             { "arts_dance", "The Arts: Dance" },
             { "arts_drama", "The Arts: Drama" },
             { "arts_media", "The Arts: Media Arts" },
             { "arts_music", "The Arts: Music" },
-            { "arts_visual", "The Arts: Visual Arts" }
+            { "arts_visual", "The Arts: Visual Arts" },
+            { "tech_design", "Design and Technologies" },
+            { "tech_digital", "Digital Technology" }
         };
 
         private static Dictionary<string, Dictionary<string, string>> AchievementLevels = new Dictionary<string, Dictionary<string, string>>
