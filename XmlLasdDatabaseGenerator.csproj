@@ -97,6 +97,16 @@
       <ENBYearLevel Include="yr10" />
     </ItemGroup>
     <ItemGroup>
+      <CNCYearLevel Include="yr3" />
+      <CNCYearLevel Include="yr4" />
+      <CNCYearLevel Include="yr5" />
+      <CNCYearLevel Include="yr6" />
+      <CNCYearLevel Include="yr7" />
+      <CNCYearLevel Include="yr8" />
+      <CNCYearLevel Include="yr9" />
+      <CNCYearLevel Include="yr10" />
+    </ItemGroup>
+    <ItemGroup>
       <KeyLearningArea Include="eng" />
       <KeyLearningArea Include="geog" />
       <KeyLearningArea Include="hist" />
@@ -109,6 +119,8 @@
       <ArtsKeyLearningArea Include="arts_media" />
       <ArtsKeyLearningArea Include="arts_music" />
       <ArtsKeyLearningArea Include="arts_visual" />
+      <ArtsKeyLearningArea Include="tech_design" />
+      <ArtsKeyLearningArea Include="tech_digital" />
     </ItemGroup>
     <ItemGroup>
       <YearLevelKLA Include="@(YearLevel)">
@@ -116,6 +128,9 @@
       </YearLevelKLA>
       <YearLevelKLA Include="@(ENBYearLevel)">
         <KLA>enb</KLA>
+      </YearLevelKLA>
+      <YearLevelKLA Include="@(CNCYearLevel)">
+        <KLA>cnc</KLA>
       </YearLevelKLA>
       <YearLevelKLA_p_2 Include="@(YearLevelGroup_p_2)">
         <KLA>%(ArtsKeyLearningArea.Identity)</KLA>
