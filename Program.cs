@@ -41,9 +41,9 @@ namespace StandardElaborationParser
                     }
                     else if (para.Name.LocalName == "ul")
                     {
-                        foreach (XElement li in para.Elements().Where(el => el.Name.LocalName == "li"))
+                        foreach (string line in GetListParagraphLines(para.Elements(), 1))
                         {
-                            lines.Add(" • " + li.Value);
+                            lines.Add(line);
                         }
                     }
                 }
@@ -55,6 +55,24 @@ namespace StandardElaborationParser
         public override string ToString()
         {
             return String.Format("    <td rowspan=\"{0}\" colspan=\"{1}\">\n      {2}\n    </td>", RowSpan, ColSpan, String.Join("\n      ", Paragraphs.Select(p => p.ToString()).ToArray()));
+        }
+
+        protected IEnumerable<string> GetListParagraphLines(IEnumerable<XElement> paragraphs, int listdepth)
+        {
+            foreach (XElement para in paragraphs)
+            {
+                if (para.Name.LocalName == "li")
+                {
+                    yield return new String(' ', listdepth * 2) + " • " + para.Value;
+                }
+                else if (para.Name.LocalName == "ul")
+                {
+                    foreach (string line in GetListParagraphLines(para.Elements(), listdepth + 1))
+                    {
+                        yield return line;
+                    }
+                }
+            }
         }
     }
 
@@ -177,50 +195,117 @@ namespace StandardElaborationParser
         
         private static IEnumerable<XElement> CellContent(XElement wordcell, Dictionary<string, XElement> styles)
         {
-            XElement list = null;
+            List<XElement> listelems = new List<XElement>();
+            XElement rootlist = null;
+            int lastilvl = -1;
 
             foreach (XElement p in wordcell.Elements(xmlns.w + "p"))
             {
                 if (p.Value != "")
                 {
                     XElement paraprops = p.Element(xmlns.w + "pPr");
-                    XElement style = null;
+                    List<XElement> pstyles = new List<XElement>();
 
                     if (paraprops != null && 
                         paraprops.Elements(xmlns.w + "pStyle").Select(ps => ps.Attribute(xmlns.w + "val")).Any(ps => styles.ContainsKey(ps.Value)))
                     {
-                        style = styles[paraprops.Element(xmlns.w + "pStyle").Attribute(xmlns.w + "val").Value];
+                        pstyles.Add(styles[paraprops.Element(xmlns.w + "pStyle").Attribute(xmlns.w + "val").Value]);
                     }
 
                     int numid = 0;
+                    int ilvl = -1;
 
-                    if (style != null && 
-                        style.Elements(xmlns.w + "pPr").SelectMany(ppr => ppr.Elements(xmlns.w + "numPr")).SelectMany(npr => npr.Elements(xmlns.w + "numId")).Any(nid => nid.Attribute(xmlns.w + "val") != null))
+                    if (paraprops != null)
                     {
-                        Int32.TryParse(style.Element(xmlns.w + "pPr").Element(xmlns.w + "numPr").Element(xmlns.w + "numId").Attribute(xmlns.w + "val").Value, out numid);
+                        XElement[] numprs = paraprops.Elements(xmlns.w + "numPr").ToArray();
+
+                        XElement numidelem = numprs.SelectMany(npr => npr.Elements(xmlns.w + "numId"))
+                                                   .FirstOrDefault(nid => nid.Attribute(xmlns.w + "val") != null);
+
+                        XElement ilvlelem = numprs.SelectMany(npr => npr.Elements(xmlns.w + "ilvl"))
+                                                   .FirstOrDefault(ilv => ilv.Attribute(xmlns.w + "val") != null);
+
+                        if (numidelem != null)
+                        {
+                            Int32.TryParse(numidelem.Attribute(xmlns.w + "val").Value, out numid);
+                        }
+
+                        if (ilvlelem != null)
+                        {
+                            Int32.TryParse(ilvlelem.Attribute(xmlns.w + "val").Value, out ilvl);
+                        }
                     }
 
-                    if (paraprops != null &&
-                        paraprops.Elements(xmlns.w + "numPr").SelectMany(npr => npr.Elements(xmlns.w + "numId")).Any(nid => nid.Attribute(xmlns.w + "val") != null))
+                    while (pstyles.Count != 0 && (numid == 0 || ilvl < 0))
                     {
-                        Int32.TryParse(paraprops.Element(xmlns.w + "numPr").Element(xmlns.w + "numId").Attribute(xmlns.w + "val").Value, out numid);
+                        List<XElement> _pstyles = pstyles;
+                        pstyles = new List<XElement>();
+
+                        foreach (XElement style in _pstyles)
+                        {
+                            List<XElement> numprs  = style.Elements(xmlns.w + "pPr")
+                                                      .SelectMany(ppr => ppr.Elements(xmlns.w + "numPr"))
+                                                      .ToList();
+
+                            XElement numidelem = numprs.SelectMany(npr => npr.Elements(xmlns.w + "numId"))
+                                                       .FirstOrDefault(nid => nid.Attribute(xmlns.w + "val") != null);
+
+                            XElement ilvlelem  = numprs.SelectMany(npr => npr.Elements(xmlns.w + "ilvl"))
+                                                       .FirstOrDefault(ilv => ilv.Attribute(xmlns.w + "val") != null);
+
+                            if (numidelem != null && numid == 0)
+                            {
+                                Int32.TryParse(numidelem.Attribute(xmlns.w + "val").Value, out numid);
+                            }
+
+                            if (ilvlelem != null && ilvl < 0)
+                            {
+                                Int32.TryParse(ilvlelem.Attribute(xmlns.w + "val").Value, out ilvl);
+                            }
+
+                            foreach (XElement basedon in style.Elements(xmlns.w + "basedOn"))
+                            {
+                                string stylename = basedon.Attributes(xmlns.w + "val").Select(a => a.Value).FirstOrDefault();
+
+                                if (styles.ContainsKey(stylename))
+                                {
+                                    pstyles.Add(styles[stylename]);
+                                }
+                            }
+                        }
                     }
 
                     if (numid != 0)
                     {
-                        if (list == null)
+                        if (rootlist == null)
                         {
-                            list = new XElement(ns_lasd + "ul");
+                            rootlist = new XElement(ns_lasd + "ul");
+                            lastilvl = 0;
                         }
 
-                        list.Add(new XElement(ns_lasd + "li", ParagraphContent(p, styles)));
+                        if (ilvl < lastilvl)
+                        {
+                            listelems.RemoveRange(ilvl + 1, listelems.Count - (ilvl + 1));
+                        }
+                        else if (ilvl > lastilvl)
+                        {
+                            for (int i = lastilvl; i < ilvl; i++)
+                            {
+                                XElement listelem = new XElement(ns_lasd + "ul");
+                                listelems[i].Add(listelem);
+                                listelems[i + 1] = listelem;
+                            }
+                        }
+
+                        listelems[ilvl].Add(new XElement(ns_lasd + "li", ParagraphContent(p, styles)));
                     }
                     else
                     {
-                        if (list != null)
+                        if (rootlist != null)
                         {
-                            yield return list;
-                            list = null;
+                            yield return rootlist;
+                            rootlist = null;
+                            lastilvl = -1;
                         }
 
                         yield return new XElement(ns_lasd + "p", ParagraphContent(p, styles));
@@ -228,9 +313,9 @@ namespace StandardElaborationParser
                 }
             }
 
-            if (list != null)
+            if (rootlist != null)
             {
-                yield return list;
+                yield return rootlist;
             }
         }
 
