@@ -195,7 +195,7 @@ namespace StandardElaborationParser
         
         private static IEnumerable<XElement> CellContent(XElement wordcell, Dictionary<string, XElement> styles)
         {
-            List<XElement> listelems = new List<XElement>();
+            XElement[] listelems = new XElement[10];
             XElement rootlist = null;
             int lastilvl = -1;
 
@@ -277,17 +277,19 @@ namespace StandardElaborationParser
 
                     if (numid != 0)
                     {
+                        if (ilvl < 0)
+                        {
+                            ilvl = 0;
+                        }
+
                         if (rootlist == null)
                         {
                             rootlist = new XElement(ns_lasd + "ul");
+                            listelems[0] = rootlist;
                             lastilvl = 0;
                         }
 
-                        if (ilvl < lastilvl)
-                        {
-                            listelems.RemoveRange(ilvl + 1, listelems.Count - (ilvl + 1));
-                        }
-                        else if (ilvl > lastilvl)
+                        if (ilvl > lastilvl)
                         {
                             for (int i = lastilvl; i < ilvl; i++)
                             {
