@@ -10,6 +10,7 @@ using System.IO;
 using TSVCEO.XmlLasdDatabase;
 using TSVCEO.OOXML.Packaging;
 using Ionic.Zip;
+using System.Net;
 
 namespace StandardElaborationParser
 {
@@ -170,6 +171,65 @@ namespace StandardElaborationParser
             { "yr8", "3-10" },
             { "yr9", "3-10" },
             { "yr10", "3-10" }
+        };
+
+        private static Dictionary<string, Dictionary<string, string[]>> YearLevelGroupings = new Dictionary<string, Dictionary<string, string[]>>
+        {
+            { "arts", new Dictionary<string, string[]> {
+                { "p2", new[] { "prep", "yr1", "yr2" } },
+                { "yr3-4", new[] { "yr3", "yr4" } },
+                { "yr5-6", new[] { "yr5", "yr6" } },
+                { "yr7-8", new[] { "yr7", "yr8" } },
+                { "yr9-10", new[] { "yr9", "yr10" } }
+            } },
+            { "hpe", new Dictionary<string, string[]> {
+                { "prep", new[] { "prep" } },
+                { "yr1-2", new[] { "yr1", "yr2" } },
+                { "yr3-4", new[] { "yr3", "yr4" } },
+                { "yr5-6", new[] { "yr5", "yr6" } },
+                { "yr7-8", new[] { "yr7", "yr8" } },
+                { "yr9-10", new[] { "yr9", "yr10" } }
+            } },
+            { "enb", new Dictionary<string, string[]> {
+                { "yr5", new[] { "yr5" } },
+                { "yr6", new[] { "yr6" } },
+                { "yr7", new[] { "yr7" } },
+                { "yr8", new[] { "yr8" } },
+                { "yr9", new[] { "yr9" } },
+                { "yr10", new[] { "yr10" } }
+            } },
+            { "cnc", new Dictionary<string, string[]> {
+                { "yr3", new[] { "yr3" } },
+                { "yr4", new[] { "yr4" } },
+                { "yr5", new[] { "yr5" } },
+                { "yr6", new[] { "yr6" } },
+                { "yr7", new[] { "yr7" } },
+                { "yr8", new[] { "yr8" } },
+                { "yr9", new[] { "yr9" } },
+                { "yr10", new[] { "yr10" } }
+            } },
+            { "other", new Dictionary<string, string[]> {
+                { "prep", new[] { "prep" } },
+                { "yr1", new[] { "yr1" } },
+                { "yr2", new[] { "yr2" } },
+                { "yr3", new[] { "yr3" } },
+                { "yr4", new[] { "yr4" } },
+                { "yr5", new[] { "yr5" } },
+                { "yr6", new[] { "yr6" } },
+                { "yr7", new[] { "yr7" } },
+                { "yr8", new[] { "yr8" } },
+                { "yr9", new[] { "yr9" } },
+                { "yr10", new[] { "yr10" } }
+            } }
+        };
+
+        private static Dictionary<string, string[]> SubjectGroupings = new Dictionary<string, string[]>
+        {
+            { "arts", new[] { "arts_dance", "arts_drama", "arts_media", "arts_music", "arts_visual" } },
+            { "hpe", new[] { "hpe" } },
+            { "enb", new[] { "enb" } },
+            { "cnc", new[] { "cnc" } },
+            { "other", new[] { "eng", "math", "geog", "hist", "sci", "tech_design", "tech_digital" } },
         };
 
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
@@ -502,6 +562,8 @@ namespace StandardElaborationParser
         private static void Main(string[] args)
         {
             GradeList gradelist = new GradeList { Grades = new List<Grade>() };
+            Dictionary<string, Grade> grades = new Dictionary<string, Grade>();
+            WebClient webclient = new WebClient();
 
             foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
             {
@@ -513,32 +575,52 @@ namespace StandardElaborationParser
                     KLAs = new List<KeyLearningAreaReference>()
                 };
 
-                foreach (KeyValuePair<string, string> subject_kvp in Subjects)
-                {
-                    string filename = Path.Combine(Environment.CurrentDirectory, @"ac_" + subject_kvp.Key + "_" + grade_kvp.Key + "_se.docx");
-
-                    if (File.Exists(filename))
-                    {
-                        Console.WriteLine("Processing {0} {1} ({2})", grade_kvp.Value, subject_kvp.Value, filename);
-
-                        Package pkg = Package.Load(filename);
-                        KeyLearningArea kla = ProcessKLA(grade_kvp.Value, grade_kvp.Key, subject_kvp.Value, subject_kvp.Key, pkg);
-                        string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
-
-                        grade.KLAs.Add(new KeyLearningAreaReference
-                        {
-                            SubjectID = kla.SubjectID,
-                            Subject = kla.Subject,
-                            Filename = xmlname,
-                            Version = kla.Version,
-                            Hash = kla.GetHash()
-                        });
-
-                        kla.ToXDocument().Save(xmlname);
-                    }
-                }
+                grades[grade_kvp.Key] = grade;
 
                 gradelist.Grades.Add(grade);
+            }
+
+            foreach (KeyValuePair<string, string[]> klagrp_kvp in SubjectGroupings)
+            {
+                string klagroupname = klagrp_kvp.Key;
+                Dictionary<string, string[]> years = YearLevelGroupings[klagroupname];
+
+                foreach (string klaname in klagrp_kvp.Value)
+                {
+                    foreach (KeyValuePair<string, string[]> gradegrp_kvp in years)
+                    {
+                        string gradegrpname = gradegrp_kvp.Key;
+                        string filename = Path.Combine(Environment.CurrentDirectory, "ac_" + klaname + "_" + gradegrpname + "_se.docx");
+
+                        if (!File.Exists(filename))
+                        {
+                            webclient.DownloadFile("https://www.qcaa.qld.edu.au/downloads/p_10/" + filename, filename);
+                        }
+
+                        if (File.Exists(filename))
+                        {
+                            foreach (string gradename in gradegrp_kvp.Value)
+                            {
+                                Console.WriteLine("Processing {0} {1} ({2})", YearLevels[gradename], Subjects[klaname], filename);
+
+                                Package pkg = Package.Load(filename);
+                                KeyLearningArea kla = ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, pkg);
+                                string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
+
+                                grades[gradename].KLAs.Add(new KeyLearningAreaReference
+                                {
+                                    SubjectID = kla.SubjectID,
+                                    Subject = kla.Subject,
+                                    Filename = xmlname,
+                                    Version = kla.Version,
+                                    Hash = kla.GetHash()
+                                });
+
+                                kla.ToXDocument().Save(xmlname);
+                            }
+                        }
+                    }
+                }
             }
 
             gradelist.ToXDocument().Save("grades.xml");
