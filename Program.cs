@@ -104,7 +104,7 @@ namespace StandardElaborationParser
 
     public class Program
     {
-        private static XNamespace ns_lasd = "http://tempuri.org/XmlLasdDatabase.xsd";
+        private static XNamespace ns_lasd = "http://gtmj.tsv.catholic.edu.au/XmlLasdDatabase.xsd";
 
         private static Dictionary<string, string> YearLevels;
 
