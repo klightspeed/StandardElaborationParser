@@ -537,10 +537,11 @@ namespace StandardElaborationParser
                         string gradegrpname = gradegrp_kvp.Key;
                         string filename = "ac_" + klaname + "_" + gradegrpname + "_se.docx";
                         string filepath = Path.Combine(Environment.CurrentDirectory, filename);
+                        string sourceurl = "https://www.qcaa.qld.edu.au/downloads/p_10/" + filename;
 
                         if (!File.Exists(filepath))
                         {
-                            webclient.DownloadFile("https://www.qcaa.qld.edu.au/downloads/p_10/" + filename, filepath);
+                            webclient.DownloadFile(sourceurl, filepath);
                         }
 
                         if (File.Exists(filepath))
@@ -551,6 +552,7 @@ namespace StandardElaborationParser
 
                                 Package pkg = Package.Load(filepath);
                                 KeyLearningArea kla = ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, pkg);
+                                kla.SourceDocumentURL = sourceurl;
                                 string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
 
                                 grades[gradename].KLAs.Add(new KeyLearningAreaReference
