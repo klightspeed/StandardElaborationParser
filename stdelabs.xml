@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<StandardElaborations>
+	<YearLevels>
+		<YearLevel id="prep">Prep</YearLevel>
+		<YearLevel id="yr1">Year 1</YearLevel>
+		<YearLevel id="yr2">Year 2</YearLevel>
+		<YearLevel id="yr3">Year 3</YearLevel>
+		<YearLevel id="yr4">Year 4</YearLevel>
+		<YearLevel id="yr5">Year 5</YearLevel>
+		<YearLevel id="yr6">Year 6</YearLevel>
+		<YearLevel id="yr7">Year 7</YearLevel>
+		<YearLevel id="yr8">Year 8</YearLevel>
+		<YearLevel id="yr9">Year 9</YearLevel>
+		<YearLevel id="yr10">Year 10</YearLevel>
+	</YearLevels>
+	<Subjects>
+		<Subject id="eng">English</Subject>
+		<Subject id="math">Mathematics</Subject>
+		<Subject id="geog">Geography</Subject>
+		<Subject id="hist">History</Subject>
+		<Subject id="sci">Science</Subject>
+		<Subject id="hpe">Health and Physical Education</Subject>
+		<Subject id="enb">Economics and Business</Subject>
+		<Subject id="cnc">Civics and Citizenship</Subject>
+		<Subject id="arts_dance">The Arts: Dance</Subject>
+		<Subject id="arts_drama">The Arts: Drama</Subject>
+		<Subject id="arts_media">The Arts: Media Arts</Subject>
+		<Subject id="arts_music">The Arts: Music</Subject>
+		<Subject id="arts_visual">The Arts: Visual Arts</Subject>
+		<Subject id="tech_design">Design and Technologies</Subject>
+		<Subject id="tech_digital">Digital Technology</Subject>
+	</Subjects>
+	<YearLevelGroups>
+		<YearLevelGroup id="p-2">
+			<YearLevel id="prep" />
+			<YearLevel id="yr1" />
+			<YearLevel id="yr2" />
+			<AchievementLevel id="AP">Applying</AchievementLevel>
+			<AchievementLevel id="MC">Making Connections</AchievementLevel>
+			<AchievementLevel id="WW">Working With</AchievementLevel>
+			<AchievementLevel id="EX">Exploring</AchievementLevel>
+			<AchievementLevel id="BA">Becoming Aware</AchievementLevel>
+		</YearLevelGroup>
+		<YearLevelGroup id="3-10">
+			<YearLevel id="yr3" />
+			<YearLevel id="yr4" />
+			<YearLevel id="yr5" />
+			<YearLevel id="yr6" />
+			<YearLevel id="yr7" />
+			<YearLevel id="yr8" />
+			<YearLevel id="yr9" />
+			<YearLevel id="yr10" />
+			<AchievementLevel id="A">A</AchievementLevel>
+			<AchievementLevel id="B">B</AchievementLevel>
+			<AchievementLevel id="C">C</AchievementLevel>
+			<AchievementLevel id="D">D</AchievementLevel>
+			<AchievementLevel id="E">E</AchievementLevel>
+		</YearLevelGroup>
+	</YearLevelGroups>
+	<SubjectGroups>
+		<SubjectGroup id="art">
+			<Subject id="arts_dance" />
+			<Subject id="arts_drama" />
+			<Subject id="arts_media" />
+			<Subject id="arts_music" />
+			<Subject id="arts_visual" />
+			<Subject id="tech_design" />
+			<Subject id="tech_digital" />
+			<YearLevelGroup id="p2">
+				<YearLevel id="prep" />
+				<YearLevel id="yr1" />
+				<YearLevel id="yr2" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr3-4">
+				<YearLevel id="yr3" />
+				<YearLevel id="yr4" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr5-6">
+				<YearLevel id="yr5" />
+				<YearLevel id="yr6" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr7-8">
+				<YearLevel id="yr7" />
+				<YearLevel id="yr8" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr9-10">
+				<YearLevel id="yr9" />
+				<YearLevel id="yr10" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="hpe">
+			<Subject id="hpe" />
+			<YearLevel id="prep" />
+			<YearLevelGroup id="yr1-2">
+				<YearLevel id="yr1" />
+				<YearLevel id="yr2" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr3-4">
+				<YearLevel id="yr3" />
+				<YearLevel id="yr4" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr5-6">
+				<YearLevel id="yr5" />
+				<YearLevel id="yr6" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr7-8">
+				<YearLevel id="yr7" />
+				<YearLevel id="yr8" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr9-10">
+				<YearLevel id="yr9" />
+				<YearLevel id="yr10" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="enb">
+			<Subject id="enb" />
+			<YearLevel id="yr5" />
+			<YearLevel id="yr6" />
+			<YearLevel id="yr7" />
+			<YearLevel id="yr8" />
+			<YearLevel id="yr9" />
+			<YearLevel id="yr10" />
+		</SubjectGroup>
+		<SubjectGroup id="cnc">
+			<Subject id="cnc" />
+			<YearLevel id="yr3" />
+			<YearLevel id="yr4" />
+			<YearLevel id="yr5" />
+			<YearLevel id="yr6" />
+			<YearLevel id="yr7" />
+			<YearLevel id="yr8" />
+			<YearLevel id="yr9" />
+			<YearLevel id="yr10" />
+		</SubjectGroup>
+		<SubjectGroup id="other">
+			<Subject id="eng" />
+			<Subject id="math" />
+			<Subject id="geog" />
+			<Subject id="hist" />
+			<Subject id="sci" />
+			<YearLevel id="prep" />
+			<YearLevel id="yr1" />
+			<YearLevel id="yr2" />
+			<YearLevel id="yr3" />
+			<YearLevel id="yr4" />
+			<YearLevel id="yr5" />
+			<YearLevel id="yr6" />
+			<YearLevel id="yr7" />
+			<YearLevel id="yr8" />
+			<YearLevel id="yr9" />
+			<YearLevel id="yr10" />
+		</SubjectGroup>
+	</SubjectGroups>
+</StandardElaborations>

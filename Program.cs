@@ -106,131 +106,75 @@ namespace StandardElaborationParser
     {
         private static XNamespace ns_lasd = "http://tempuri.org/XmlLasdDatabase.xsd";
 
-        private static Dictionary<string, string> YearLevels = new Dictionary<string, string>
-        {
-            { "prep", "Prep" },
-            { "yr1", "Year 1" },
-            { "yr2", "Year 2" },
-            { "yr3", "Year 3" },
-            { "yr4", "Year 4" },
-            { "yr5", "Year 5" },
-            { "yr6", "Year 6" },
-            { "yr7", "Year 7" },
-            { "yr8", "Year 8" },
-            { "yr9", "Year 9" },
-            { "yr10", "Year 10" }
-        };
+        private static Dictionary<string, string> YearLevels;
 
-        private static Dictionary<string, string> Subjects = new Dictionary<string, string>
-        {
-            { "eng", "English" },
-            { "math", "Mathematics" },
-            { "geog", "Geography" },
-            { "hist", "History" },
-            { "sci", "Science" },
-            { "hpe", "Health and Physical Education" },
-            { "enb", "Economics and Business" },
-            { "cnc", "Civics and Citizenship" },
-            { "arts_dance", "The Arts: Dance" },
-            { "arts_drama", "The Arts: Drama" },
-            { "arts_media", "The Arts: Media Arts" },
-            { "arts_music", "The Arts: Music" },
-            { "arts_visual", "The Arts: Visual Arts" },
-            { "tech_design", "Design and Technologies" },
-            { "tech_digital", "Digital Technology" }
-        };
+        private static Dictionary<string, string> Subjects;
 
-        private static Dictionary<string, Dictionary<string, string>> AchievementLevels = new Dictionary<string, Dictionary<string, string>>
-        {
-            { "p-2", new Dictionary<string, string> {
-                { "AP", "Applying" },
-                { "MC", "Making Connections" },
-                { "WW", "Working With" },
-                { "EX", "Exploring" },
-                { "BA", "Becoming Aware" }
-            } },
-            { "3-10", new Dictionary<string, string> {
-                { "A", "A" },
-                { "B", "B" },
-                { "C", "C" },
-                { "D", "D" },
-                { "E", "E" }
-            } }
-        };
+        private static Dictionary<string, Dictionary<string, string>> AchievementLevels;
 
-        private static Dictionary<string, string> GradeAchievementLevelRefs = new Dictionary<string, string>
-        {
-            { "prep", "p-2" },
-            { "yr1", "p-2" },
-            { "yr2", "p-2" },
-            { "yr3", "3-10" },
-            { "yr4", "3-10" },
-            { "yr5", "3-10" },
-            { "yr6", "3-10" },
-            { "yr7", "3-10" },
-            { "yr8", "3-10" },
-            { "yr9", "3-10" },
-            { "yr10", "3-10" }
-        };
+        private static Dictionary<string, string> GradeAchievementLevelRefs;
 
-        private static Dictionary<string, Dictionary<string, string[]>> YearLevelGroupings = new Dictionary<string, Dictionary<string, string[]>>
-        {
-            { "arts", new Dictionary<string, string[]> {
-                { "p2", new[] { "prep", "yr1", "yr2" } },
-                { "yr3-4", new[] { "yr3", "yr4" } },
-                { "yr5-6", new[] { "yr5", "yr6" } },
-                { "yr7-8", new[] { "yr7", "yr8" } },
-                { "yr9-10", new[] { "yr9", "yr10" } }
-            } },
-            { "hpe", new Dictionary<string, string[]> {
-                { "prep", new[] { "prep" } },
-                { "yr1-2", new[] { "yr1", "yr2" } },
-                { "yr3-4", new[] { "yr3", "yr4" } },
-                { "yr5-6", new[] { "yr5", "yr6" } },
-                { "yr7-8", new[] { "yr7", "yr8" } },
-                { "yr9-10", new[] { "yr9", "yr10" } }
-            } },
-            { "enb", new Dictionary<string, string[]> {
-                { "yr5", new[] { "yr5" } },
-                { "yr6", new[] { "yr6" } },
-                { "yr7", new[] { "yr7" } },
-                { "yr8", new[] { "yr8" } },
-                { "yr9", new[] { "yr9" } },
-                { "yr10", new[] { "yr10" } }
-            } },
-            { "cnc", new Dictionary<string, string[]> {
-                { "yr3", new[] { "yr3" } },
-                { "yr4", new[] { "yr4" } },
-                { "yr5", new[] { "yr5" } },
-                { "yr6", new[] { "yr6" } },
-                { "yr7", new[] { "yr7" } },
-                { "yr8", new[] { "yr8" } },
-                { "yr9", new[] { "yr9" } },
-                { "yr10", new[] { "yr10" } }
-            } },
-            { "other", new Dictionary<string, string[]> {
-                { "prep", new[] { "prep" } },
-                { "yr1", new[] { "yr1" } },
-                { "yr2", new[] { "yr2" } },
-                { "yr3", new[] { "yr3" } },
-                { "yr4", new[] { "yr4" } },
-                { "yr5", new[] { "yr5" } },
-                { "yr6", new[] { "yr6" } },
-                { "yr7", new[] { "yr7" } },
-                { "yr8", new[] { "yr8" } },
-                { "yr9", new[] { "yr9" } },
-                { "yr10", new[] { "yr10" } }
-            } }
-        };
+        private static Dictionary<string, Dictionary<string, string[]>> YearLevelGroupings;
 
-        private static Dictionary<string, string[]> SubjectGroupings = new Dictionary<string, string[]>
+        private static Dictionary<string, string[]> SubjectGroupings;
+
+        private static void ProcessConfig()
         {
-            { "arts", new[] { "arts_dance", "arts_drama", "arts_media", "arts_music", "arts_visual" } },
-            { "hpe", new[] { "hpe" } },
-            { "enb", new[] { "enb" } },
-            { "cnc", new[] { "cnc" } },
-            { "other", new[] { "eng", "math", "geog", "hist", "sci", "tech_design", "tech_digital" } },
-        };
+            XDocument configfile = XDocument.Load(File.Open("stdelabs.xml", FileMode.Open));
+            XElement root = configfile.Root;
+            YearLevels = 
+                root.Element("YearLevels")
+                    .Elements("YearLevel")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value, 
+                        e => e.Value
+                    );
+            Subjects = 
+                root.Element("Subjects")
+                    .Elements("Subject")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value, 
+                        e => e.Value
+                    );
+            AchievementLevels = 
+                root.Element("YearLevelGroups")
+                    .Elements("YearLevelGroup")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Elements("AchievementLevel")
+                              .ToDictionary(
+                                al => al.Attribute("id").Value,
+                                al => al.Value
+                              )
+                    );
+            GradeAchievementLevelRefs =
+                root.Element("YearLevelGroups")
+                    .Elements("YearLevelGroup")
+                    .SelectMany(
+                        e => e.Elements("YearLevel")
+                              .Select(yl => new { grp = e.Attribute("id").Value, level = yl.Attribute("id").Value })
+                    )
+                    .ToDictionary(g => g.level, g => g.grp);
+            YearLevelGroupings =
+                root.Element("SubjectGroups")
+                    .Elements("SubjectGroup")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Elements("YearLevelGroup")
+                              .Select(yg => new { grp = yg.Attribute("id").Value, levels = yg.Elements("YearLevel").Select(yl => yl.Attribute("id").Value).ToArray() })
+                              .Union(e.Elements("YearLevel").Select(yl => yl.Attribute("id").Value).Select(yl => new { grp = yl, levels = new[] { yl } }))
+                              .ToDictionary(g => g.grp, g => g.levels)
+                    );
+            SubjectGroupings =
+                root.Element("SubjectGroups")
+                    .Elements("SubjectGroup")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Elements("Subject")
+                              .Select(s => s.Attribute("id").Value)
+                              .ToArray()
+                    );
+        }
 
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
@@ -564,6 +508,7 @@ namespace StandardElaborationParser
             GradeList gradelist = new GradeList { Grades = new List<Grade>() };
             Dictionary<string, Grade> grades = new Dictionary<string, Grade>();
             WebClient webclient = new WebClient();
+            ProcessConfig();
 
             foreach (KeyValuePair<string, string> grade_kvp in YearLevels)
             {
@@ -590,20 +535,21 @@ namespace StandardElaborationParser
                     foreach (KeyValuePair<string, string[]> gradegrp_kvp in years)
                     {
                         string gradegrpname = gradegrp_kvp.Key;
-                        string filename = Path.Combine(Environment.CurrentDirectory, "ac_" + klaname + "_" + gradegrpname + "_se.docx");
+                        string filename = "ac_" + klaname + "_" + gradegrpname + "_se.docx";
+                        string filepath = Path.Combine(Environment.CurrentDirectory, filename);
 
-                        if (!File.Exists(filename))
+                        if (!File.Exists(filepath))
                         {
-                            webclient.DownloadFile("https://www.qcaa.qld.edu.au/downloads/p_10/" + filename, filename);
+                            webclient.DownloadFile("https://www.qcaa.qld.edu.au/downloads/p_10/" + filename, filepath);
                         }
 
-                        if (File.Exists(filename))
+                        if (File.Exists(filepath))
                         {
                             foreach (string gradename in gradegrp_kvp.Value)
                             {
                                 Console.WriteLine("Processing {0} {1} ({2})", YearLevels[gradename], Subjects[klaname], filename);
 
-                                Package pkg = Package.Load(filename);
+                                Package pkg = Package.Load(filepath);
                                 KeyLearningArea kla = ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, pkg);
                                 string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
 
