@@ -216,7 +216,7 @@ namespace StandardElaborationParser
                         pstyles.Add(styles[paraprops.Element(xmlns.w + "pStyle").Attribute(xmlns.w + "val").Value]);
                     }
 
-                    int numid = 0;
+                    int numid = -1;
                     int ilvl = -1;
 
                     if (paraprops != null)
@@ -240,7 +240,7 @@ namespace StandardElaborationParser
                         }
                     }
 
-                    while (pstyles.Count != 0 && (numid == 0 || ilvl < 0))
+                    while (pstyles.Count != 0 && (numid < 0 || ilvl < 0))
                     {
                         List<XElement> _pstyles = pstyles;
                         pstyles = new List<XElement>();
@@ -257,7 +257,7 @@ namespace StandardElaborationParser
                             XElement ilvlelem  = numprs.SelectMany(npr => npr.Elements(xmlns.w + "ilvl"))
                                                        .FirstOrDefault(ilv => ilv.Attribute(xmlns.w + "val") != null);
 
-                            if (numidelem != null && numid == 0)
+                            if (numidelem != null && numid < 0)
                             {
                                 Int32.TryParse(numidelem.Attribute(xmlns.w + "val").Value, out numid);
                             }
@@ -279,7 +279,7 @@ namespace StandardElaborationParser
                         }
                     }
 
-                    if (numid != 0)
+                    if (numid > 0)
                     {
                         if (ilvl < 0)
                         {
