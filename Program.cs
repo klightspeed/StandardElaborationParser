@@ -136,6 +136,10 @@ namespace StandardElaborationParser
                                 {
                                     kla = StandardElaborationDocxParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
                                 }
+                                else if (format == "pdf")
+                                {
+                                    kla = StandardElaborationPDFParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
+                                }
 
                                 if (kla != null)
                                 {
