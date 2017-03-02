@@ -20,6 +20,8 @@ namespace StandardElaborationParser
 
         private static Dictionary<string, string> Subjects;
 
+        private static Dictionary<string, string> SubjectFormats;
+
         private static Dictionary<string, Dictionary<string, string>> AchievementLevels;
 
         private static Dictionary<string, string> GradeAchievementLevelRefs;
@@ -45,6 +47,13 @@ namespace StandardElaborationParser
                     .ToDictionary(
                         e => e.Attribute("id").Value, 
                         e => e.Value
+                    );
+            SubjectFormats =
+                root.Element("Subjects")
+                    .Elements("Subject")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Attribute("format").Value
                     );
             AchievementLevels = 
                 root.Element("YearLevelGroups")
@@ -104,8 +113,9 @@ namespace StandardElaborationParser
                 {
                     foreach (KeyValuePair<string, string[]> gradegrp_kvp in years)
                     {
+                        string format = SubjectFormats.ContainsKey(klaname) ? SubjectFormats[klaname] : "docx";
                         string gradegrpname = gradegrp_kvp.Key;
-                        string filename = "ac_" + klaname + "_" + gradegrpname + "_se.docx";
+                        string filename = "ac_" + klaname + "_" + gradegrpname + "_se." + format;
                         string filepath = Path.Combine(Environment.CurrentDirectory, filename);
                         string sourceurl = "https://www.qcaa.qld.edu.au/downloads/p_10/" + filename;
 
@@ -120,26 +130,34 @@ namespace StandardElaborationParser
                             {
                                 Console.WriteLine("Processing {0} {1} ({2})", YearLevels[gradename], Subjects[klaname], filename);
 
-                                KeyLearningArea kla = StandardElaborationDocxParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
+                                KeyLearningArea kla = null;
 
-                                kla.SourceDocumentURL = sourceurl;
-                                string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
-
-                                if (!klarefs.ContainsKey(gradename))
+                                if (format == "docx")
                                 {
-                                    klarefs[gradename] = new Dictionary<string, KeyLearningAreaReference>();
+                                    kla = StandardElaborationDocxParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
                                 }
 
-                                klarefs[gradename][klaname] = new KeyLearningAreaReference
+                                if (kla != null)
                                 {
-                                    SubjectID = kla.SubjectID,
-                                    Subject = kla.Subject,
-                                    Filename = xmlname,
-                                    Version = kla.Version,
-                                    Hash = kla.GetHash()
-                                };
+                                    kla.SourceDocumentURL = sourceurl;
+                                    string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
 
-                                kla.ToXDocument().Save(xmlname);
+                                    if (!klarefs.ContainsKey(gradename))
+                                    {
+                                        klarefs[gradename] = new Dictionary<string, KeyLearningAreaReference>();
+                                    }
+
+                                    klarefs[gradename][klaname] = new KeyLearningAreaReference
+                                    {
+                                        SubjectID = kla.SubjectID,
+                                        Subject = kla.Subject,
+                                        Filename = xmlname,
+                                        Version = kla.Version,
+                                        Hash = kla.GetHash()
+                                    };
+
+                                    kla.ToXDocument().Save(xmlname);
+                                }
                             }
                         }
                     }
