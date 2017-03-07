@@ -77,11 +77,17 @@ namespace StandardElaborationParser
         {
             if (block.BlockType.Name == "LI")
             {
+                string text = block.Text.Trim();
+                if (text.StartsWith("\x95"))
+                {
+                    text = text.Substring(1).Trim();
+                }
+
                 yield return new PDFListEntry
                 {
                     Content = block,
                     Paragraphs = block.Content.OfType<PDFContentBlock>().SelectMany(p => EnumerateListParagraphs(p)).ToList(),
-                    Element = new XElement(xmlns.lasd + "li", block.Text.Trim())
+                    Element = new XElement(xmlns.lasd + "li", text)
                 };
             }
         }
