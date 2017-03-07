@@ -42,6 +42,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Net" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -64,6 +65,10 @@
     <ProjectReference Include="..\OOXML\OOXML.csproj">
       <Project>{B3468B70-D98D-4F29-9C0C-BAAABC0066C6}</Project>
       <Name>OOXML</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\PDF\PDF.csproj">
+      <Project>{a74a9229-f601-4caa-af9d-d5a1046d9570}</Project>
+      <Name>PDF</Name>
     </ProjectReference>
     <ProjectReference Include="..\XmlLasdDatabase\XmlLasdDatabase.csproj">
       <Project>{B8306064-453D-4078-BCF8-CFD0201CF0FB}</Project>
