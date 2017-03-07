@@ -14,21 +14,21 @@
 		<YearLevel id="yr10">Year 10</YearLevel>
 	</YearLevels>
 	<Subjects>
-		<Subject id="eng">English</Subject>
-		<Subject id="math">Mathematics</Subject>
-		<Subject id="geog">Geography</Subject>
-		<Subject id="hist">History</Subject>
-		<Subject id="sci">Science</Subject>
-		<Subject id="hpe">Health and Physical Education</Subject>
-		<Subject id="enb">Economics and Business</Subject>
-		<Subject id="cnc">Civics and Citizenship</Subject>
-		<Subject id="arts_dance">The Arts: Dance</Subject>
-		<Subject id="arts_drama">The Arts: Drama</Subject>
-		<Subject id="arts_media">The Arts: Media Arts</Subject>
-		<Subject id="arts_music">The Arts: Music</Subject>
-		<Subject id="arts_visual">The Arts: Visual Arts</Subject>
-		<Subject id="tech_design">Design and Technologies</Subject>
-		<Subject id="tech_digital">Digital Technology</Subject>
+		<Subject id="eng" format="pdf">English</Subject>
+		<Subject id="math" format="pdf">Mathematics</Subject>
+		<Subject id="geog" format="docx">Geography</Subject>
+		<Subject id="hist" format="docx">History</Subject>
+		<Subject id="sci" format="pdf">Science</Subject>
+		<Subject id="hpe" format="pdf">Health and Physical Education</Subject>
+		<Subject id="enb" format="docx">Economics and Business</Subject>
+		<Subject id="cnc" format="docx">Civics and Citizenship</Subject>
+		<Subject id="arts_dance" format="docx">The Arts: Dance</Subject>
+		<Subject id="arts_drama" format="docx">The Arts: Drama</Subject>
+		<Subject id="arts_media" format="docx">The Arts: Media Arts</Subject>
+		<Subject id="arts_music" format="docx">The Arts: Music</Subject>
+		<Subject id="arts_visual" format="docx">The Arts: Visual Arts</Subject>
+		<Subject id="tech_design" format="docx">Design and Technologies</Subject>
+		<Subject id="tech_digital" format="docx">Digital Technology</Subject>
 	</Subjects>
 	<YearLevelGroups>
 		<YearLevelGroup id="p-2">
