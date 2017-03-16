@@ -96,7 +96,10 @@ namespace StandardElaborationParser
         {
             if (block.BlockType.Name == "P")
             {
-                yield return new PDFParagraph { Content = block, Element = new XElement(xmlns.lasd + "p", block.Text.Trim()) };
+                if (block.Text.Trim() != "")
+                {
+                    yield return new PDFParagraph { Content = block, Element = new XElement(xmlns.lasd + "p", block.Text.Trim()) };
+                }
             }
             else if (block.BlockType.Name == "L")
             {
@@ -246,6 +249,7 @@ namespace StandardElaborationParser
                 {
                     List<float> colx = new List<float>();
                     List<float> rowy = table.Rows.Select(r => r.RowTop).ToList();
+                    int maxcol = 0;
 
                     // Find column widths
                     for (int rownum = 0; rownum < table.Rows.Count; rownum++)
@@ -267,11 +271,24 @@ namespace StandardElaborationParser
 
                                 if (colnum >= colx.Count)
                                 {
-                                    colx.Add(x);
+                                    while (colnum >= colx.Count)
+                                    {
+                                        colx.Add(x);
+                                    }
                                 }
                                 else if (x < colx[colnum] - 10)
                                 {
-                                    colx.Insert(colnum, x);
+                                    int c0 = colnum;
+
+                                    while (c0 > 0 && x < colx[c0 - 1] - 10)
+                                    {
+                                        c0--;
+                                    }
+
+                                    for (; c0 <= colnum; c0++)
+                                    {
+                                        colx.Insert(c0, x);
+                                    }
                                 }
                                 else if (x < colx[colnum])
                                 {
@@ -281,9 +298,14 @@ namespace StandardElaborationParser
 
                             colnum++;
                         }
+
+                        if (colnum >= maxcol)
+                        {
+                            maxcol = colnum + 1;
+                        }
                     }
 
-                    PDFTableCell[][] cells = Enumerable.Range(0, rowy.Count).Select(i => new PDFTableCell[colx.Count]).ToArray();
+                    PDFTableCell[][] cells = Enumerable.Range(0, rowy.Count).Select(i => new PDFTableCell[maxcol + 1]).ToArray();
 
                     // Find column and row spans
                     for (int rownum = 0; rownum < table.Rows.Count; rownum++)
@@ -294,28 +316,34 @@ namespace StandardElaborationParser
 
                         foreach (PDFTableCell tc in tr.Cells)
                         {
-                            float x = tc.CropBox.X;
-                            float y = tc.CropBox.Y;
+                            float x = tc.TextPos.X;
+                            float y = tc.TextPos.Y;
 
-                            if (x != 0 && y != 0)
+                            if ((x != 0 && y != 0) || (tc.Content.Text != null && tc.Content.Text.Trim() != ""))
                             {
                                 int cn = colnum;
-                                
-                                while (cn < colx.Count && x > colx[cn] + 20)
+
+                                if (x != 0)
                                 {
-                                    cn++;
+                                    while (cn < colx.Count - 1 && x >= colx[cn + 1])
+                                    {
+                                        cn++;
+                                    }
                                 }
 
-                                tc.ColSpan = cn + 1 - colnum;
+                                tc.ColSpan = Math.Max(cn + 1 - colnum, 1);
 
                                 int rn = rownum;
 
-                                while (rn < rowy.Count - 1 && y < rowy[rn + 1])
+                                if (y != 0)
                                 {
-                                    rn++;
+                                    while (rn < rowy.Count - 1 && y < rowy[rn + 1])
+                                    {
+                                        rn++;
+                                    }
                                 }
 
-                                tc.RowSpan = rn + 1 - rownum;
+                                tc.RowSpan = Math.Max(rn + 1 - rownum, 1);
 
                                 for (int r = rownum; r <= rn; r++)
                                 {
