@@ -387,7 +387,7 @@ namespace StandardElaborationParser
                                     tc.RowSpan = Math.Max(rn + 1 - rownum, 1);
                                 }
 
-                                for (int i = 0; i <= tc.RowSpan; i++)
+                                for (int i = 0; i < tc.RowSpan; i++)
                                 {
                                     cells[rownum + i][cn] = tc;
                                 }
