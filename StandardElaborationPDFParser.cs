@@ -498,6 +498,15 @@ namespace StandardElaborationParser
             {
                 List<PDFTable> tables = EnumerateTables(root).ToList();
                 KeyLearningArea kla = ProcessKLA(yearLevel, yearLevelId, subject, subjectId, tables);
+                if (doc.Info != null && doc.Info.Dict != null)
+                {
+                    PDFDictionary info = doc.Info.Dict;
+                    PDFString moddate;
+                    if (info.TryGet("ModDate", out moddate))
+                    {
+                        kla.Version = moddate.Value;
+                    }
+                }
                 return kla;
             }
             else
