@@ -137,6 +137,23 @@ namespace StandardElaborationParser
                         Paragraphs = block.Content.OfType<PDFContentBlock>().SelectMany(p => EnumerateParagraphs(p)).ToList()
                     };
 
+                    if (block.Attributes != null && block.Attributes.Dict != null)
+                    {
+                        PDFDictionary attrs = block.Attributes.Dict;
+                        PDFInteger rowspan;
+                        PDFInteger colspan;
+
+                        if (attrs.TryGet("RowSpan", out rowspan))
+                        {
+                            cell.RowSpan = (int)rowspan.Value;
+                        }
+
+                        if (attrs.TryGet("ColSpan", out colspan))
+                        {
+                            cell.ColSpan = (int)colspan.Value;
+                        }
+                    }
+
                     cell.Elements = cell.Paragraphs.Select(p => p.Element).ToList();
 
                     yield return cell;
@@ -148,6 +165,23 @@ namespace StandardElaborationParser
                         Content = block,
                         Paragraphs = block.Content.OfType<PDFContentBlock>().SelectMany(p => EnumerateParagraphs(p)).ToList()
                     };
+
+                    if (block.Attributes != null && block.Attributes.Dict != null)
+                    {
+                        PDFDictionary attrs = block.Attributes.Dict;
+                        PDFInteger rowspan;
+                        PDFInteger colspan;
+
+                        if (attrs.TryGet("RowSpan", out rowspan))
+                        {
+                            cell.RowSpan = (int)rowspan.Value;
+                        }
+
+                        if (attrs.TryGet("ColSpan", out colspan))
+                        {
+                            cell.ColSpan = (int)colspan.Value;
+                        }
+                    }
 
                     cell.Elements = cell.Paragraphs.Select(p => p.Element).ToList();
 
@@ -314,6 +348,8 @@ namespace StandardElaborationParser
                         List<PDFTableCell> rcells = new List<PDFTableCell>();
                         int colnum = 0;
 
+                        PDFTableCell ltc = null;
+
                         foreach (PDFTableCell tc in tr.Cells)
                         {
                             float x = tc.TextPos.X;
@@ -331,7 +367,10 @@ namespace StandardElaborationParser
                                     }
                                 }
 
-                                tc.ColSpan = Math.Max(cn + 1 - colnum, 1);
+                                if (ltc != null && ltc.ColSpan == 0)
+                                {
+                                    ltc.ColSpan = Math.Max(cn + 1 - colnum, 1);
+                                }
 
                                 int rn = rownum;
 
@@ -343,15 +382,20 @@ namespace StandardElaborationParser
                                     }
                                 }
 
-                                tc.RowSpan = Math.Max(rn + 1 - rownum, 1);
-
-                                for (int r = rownum; r <= rn; r++)
+                                if (tc.RowSpan == 0)
                                 {
-                                    cells[r][cn] = tc;
+                                    tc.RowSpan = Math.Max(rn + 1 - rownum, 1);
+                                }
+
+                                for (int i = 0; i <= tc.RowSpan; i++)
+                                {
+                                    cells[rownum + i][cn] = tc;
                                 }
 
                                 colnum = cn + 1;
                             }
+
+                            ltc = tc;
                         }
                     }
 
