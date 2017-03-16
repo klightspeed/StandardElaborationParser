@@ -355,11 +355,22 @@ namespace StandardElaborationParser
                         }
                     }
 
+                    List<string> lastgroups = new List<string>();
+
                     for (int rownum = 1; rownum < cells.Length; rownum++)
                     {
                         List<PDFTableCell> rcells = cells[rownum].Where(c => c != null).Reverse().ToList();
                         List<string> groups = rcells.Skip(5).Reverse().Select(c => c.Content.Text.Replace("\n", " ")).ToList();
                         PDFTableCell[] descs = rcells.Take(5).Reverse().ToArray();
+
+                        if (groups.Count == 0 || (groups.Count < lastgroups.Count && groups.Select((g, i) => g == lastgroups[i]).All(g => g)))
+                        {
+                            groups = lastgroups;
+                        }
+                        else
+                        {
+                            lastgroups = groups;
+                        }
 
                         if (descs.Length == 5 && !descs.Any(d => d is PDFTableHeaderCell) && descs.Aggregate((int?)null, (a, d) => (a == null || d.RowSpan == a) ? d.RowSpan : -1) >= 1)
                         {
