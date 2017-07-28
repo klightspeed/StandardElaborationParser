@@ -14,12 +14,12 @@
 		<YearLevel id="yr10">Year 10</YearLevel>
 	</YearLevels>
 	<Subjects>
-		<Subject id="eng" format="pdf">English</Subject>
-		<Subject id="math" format="pdf">Mathematics</Subject>
+		<Subject id="eng" format="docx">English</Subject>
+		<Subject id="math" format="docx">Mathematics</Subject>
 		<Subject id="geog" format="docx">Geography</Subject>
 		<Subject id="hist" format="docx">History</Subject>
-		<Subject id="sci" format="pdf">Science</Subject>
-		<Subject id="hpe" format="pdf">Health and Physical Education</Subject>
+		<Subject id="sci" format="docx">Science</Subject>
+		<Subject id="hpe" format="docx">Health and Physical Education</Subject>
 		<Subject id="enb" format="docx">Economics and Business</Subject>
 		<Subject id="cnc" format="docx">Civics and Citizenship</Subject>
 		<Subject id="arts_dance" format="docx">The Arts: Dance</Subject>
@@ -29,6 +29,8 @@
 		<Subject id="arts_visual" format="docx">The Arts: Visual Arts</Subject>
 		<Subject id="tech_design" format="docx">Design and Technologies</Subject>
 		<Subject id="tech_digital" format="docx">Digital Technology</Subject>
+		<Subject id="french" format="docx">French</Subject>
+		<Subject id="japanese" format="docx">Japanese</Subject>
 	</Subjects>
 	<YearLevelGroups>
 		<YearLevelGroup id="p-2">
@@ -67,6 +69,31 @@
 			<Subject id="tech_design" />
 			<Subject id="tech_digital" />
 			<YearLevelGroup id="p2">
+				<YearLevel id="prep" />
+				<YearLevel id="yr1" />
+				<YearLevel id="yr2" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr3-4">
+				<YearLevel id="yr3" />
+				<YearLevel id="yr4" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr5-6">
+				<YearLevel id="yr5" />
+				<YearLevel id="yr6" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr7-8">
+				<YearLevel id="yr7" />
+				<YearLevel id="yr8" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr9-10">
+				<YearLevel id="yr9" />
+				<YearLevel id="yr10" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="lote">
+			<Subject id="french" />
+			<Subject id="japanese" />
+			<YearLevelGroup id="prep-yr2">
 				<YearLevel id="prep" />
 				<YearLevel id="yr1" />
 				<YearLevel id="yr2" />

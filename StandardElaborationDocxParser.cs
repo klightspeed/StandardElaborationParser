@@ -5,11 +5,14 @@ using System.Text;
 using System.Xml.Linq;
 using TSVCEO.OOXML.Packaging;
 using TSVCEO.XmlLasdDatabase;
+using System.Text.RegularExpressions;
 
 namespace StandardElaborationParser
 {
     public class StandardElaborationDocxParser
     {
+        private static Regex achstd_regex = new Regex(" Australian Curriculum: .* achievement standard", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
         public class xmlns
         {
             public static readonly XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -25,6 +28,7 @@ namespace StandardElaborationParser
             public int RowSpan;
             public int ColSpan;
             public XElement[] Paragraphs;
+            public XElement WordCell;
             public string Text
             {
                 get
@@ -101,22 +105,79 @@ namespace StandardElaborationParser
 
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
+            List<XText> superscript = new List<XText>();
+
             foreach (XElement el in para.Elements())
             {
                 if (el.Name == xmlns.w + "r")
                 {
-                    foreach (XElement text in el.Elements(xmlns.w + "t"))
+                    XElement runprops = el.Element(xmlns.w + "rPr");
+                    List<XElement> rstyles = new List<XElement>();
+                    string valignval = null;
+
+                    if (runprops != null)
                     {
-                        yield return new XText(text.Value);
+                        rstyles.Add(runprops);
+                    }
+
+                    if (runprops != null &&
+                        runprops.Elements(xmlns.w + "rStyle").Select(rs => rs.Attribute(xmlns.w + "val")).Any(rs => styles.ContainsKey(rs.Value)))
+                    {
+                        rstyles.AddRange(styles[runprops.Element(xmlns.w + "rStyle").Attribute(xmlns.w + "val").Value].Elements(xmlns.w + "rPr"));
+                    }
+
+                    if (rstyles.Count != 0)
+                    {
+                        XElement[] valign = rstyles.SelectMany(rp => rp.Elements(xmlns.w + "vertAlign")).ToArray();
+                        if (valign.Length != 0)
+                        {
+                            valignval = valign.SelectMany(e => e.Attributes(xmlns.w + "val"))
+                                              .Select(a => a.Value)
+                                              .FirstOrDefault();
+                        }
+                    }
+
+                    if (valignval != null && valignval == "superscript")
+                    {
+                        XText[] t = el.Elements(xmlns.w + "t").Select(e => new XText(e.Value)).ToArray();
+                        if (t.Length != 0)
+                        {
+                            superscript.AddRange(t);
+                        }
+                    }
+                    else
+                    {
+                        if (superscript.Count != 0)
+                        {
+                            yield return new XElement("sup", superscript);
+                            superscript.Clear();
+                        }
+
+                        foreach (XElement text in el.Elements(xmlns.w + "t"))
+                        {
+                            yield return new XText(text.Value);
+                        }
                     }
                 }
                 else if (el.Name == xmlns.w + "hyperlink")
                 {
+                    if (superscript.Count != 0)
+                    {
+                        yield return new XElement("sup", superscript);
+                        superscript.Clear();
+                    }
+
                     foreach (XNode node in ParagraphContent(el, styles))
                     {
                         yield return node;
                     }
                 }
+            }
+
+            if (superscript.Count != 0)
+            {
+                yield return new XElement("sup", superscript);
+                superscript.Clear();
             }
         }
 
@@ -296,6 +357,7 @@ namespace StandardElaborationParser
                             RowSpan = 1,
                             ColSpan = colspan,
                             Paragraphs = paragraphs,
+                            WordCell = tblcell,
                         };
 
                         columns[tcno] = cell;
@@ -327,7 +389,7 @@ namespace StandardElaborationParser
                 int cols = table.Columns;
                 int rows = table.Rows;
 
-                if (cols >= 7)
+                if (cols >= 6)
                 {
                     //kla.AchievementLevels = Enumerable.Range(0, cols).Select(c => table.Cells[0, c]).Where(c => c != null).Reverse().Take(5).Reverse().Select(c => c.Text).ToList();
 
@@ -388,7 +450,7 @@ namespace StandardElaborationParser
                             TermDefinition term = kla.Terms[kla.Terms.Count - 1];
                             term.Description.Elements = term.Description.Elements.Concat(elements).ToArray();
                         }
-                        else
+                        else if (!kla.Terms.Any(t => t.Name == name.TrimEnd('*')))
                         {
                             kla.Terms.Add(new TermDefinition
                             {
@@ -398,6 +460,12 @@ namespace StandardElaborationParser
                             });
                         }
                     }
+                }
+                else if (table.Cells[0, 0].Text != null && achstd_regex.IsMatch(table.Cells[0, 0].Text))
+                {
+                    var cell = table.Cells[1, 0];
+                    XElement[] paras = cell.Paragraphs;
+                    kla.AchievementStandard = new FormattedText { Elements = paras };
                 }
             }
 
