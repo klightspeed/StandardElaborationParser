@@ -106,6 +106,7 @@ namespace StandardElaborationParser
         private static IEnumerable<XNode> ParagraphContent(XElement para, Dictionary<string, XElement> styles)
         {
             List<XText> superscript = new List<XText>();
+            List<XText> quality = new List<XText>();
 
             foreach (XElement el in para.Elements())
             {
@@ -114,6 +115,7 @@ namespace StandardElaborationParser
                     XElement runprops = el.Element(xmlns.w + "rPr");
                     List<XElement> rstyles = new List<XElement>();
                     string valignval = null;
+                    string rstylename = null;
 
                     if (runprops != null)
                     {
@@ -123,7 +125,8 @@ namespace StandardElaborationParser
                     if (runprops != null &&
                         runprops.Elements(xmlns.w + "rStyle").Select(rs => rs.Attribute(xmlns.w + "val")).Any(rs => styles.ContainsKey(rs.Value)))
                     {
-                        rstyles.AddRange(styles[runprops.Element(xmlns.w + "rStyle").Attribute(xmlns.w + "val").Value].Elements(xmlns.w + "rPr"));
+                        rstylename = runprops.Element(xmlns.w + "rStyle").Attribute(xmlns.w + "val").Value;
+                        rstyles.AddRange(styles[rstylename].Elements(xmlns.w + "rPr"));
                     }
 
                     if (rstyles.Count != 0)
@@ -149,13 +152,30 @@ namespace StandardElaborationParser
                     {
                         if (superscript.Count != 0)
                         {
-                            yield return new XElement("sup", superscript);
+                            yield return new XElement(xmlns.lasd + "sup", superscript);
                             superscript.Clear();
                         }
 
-                        foreach (XElement text in el.Elements(xmlns.w + "t"))
+                        if (rstylename == "shadingdifferences")
                         {
-                            yield return new XText(text.Value);
+                            XText[] txt = el.Elements(xmlns.w + "t").Select(e => new XText(e.Value)).Where(t => t.Value != "").ToArray();
+                            if (txt.Length != 0)
+                            {
+                                quality.AddRange(txt);
+                            }
+                        }
+                        else
+                        {
+                            if (quality.Count != 0)
+                            {
+                                yield return new XElement(xmlns.lasd + "quality", quality);
+                                quality.Clear();
+                            }
+
+                            foreach (XElement text in el.Elements(xmlns.w + "t"))
+                            {
+                                yield return new XText(text.Value);
+                            }
                         }
                     }
                 }
@@ -163,8 +183,13 @@ namespace StandardElaborationParser
                 {
                     if (superscript.Count != 0)
                     {
-                        yield return new XElement("sup", superscript);
+                        yield return new XElement(xmlns.lasd + "sup", superscript);
                         superscript.Clear();
+                    }
+                    else if (quality.Count != 0)
+                    {
+                        yield return new XElement(xmlns.lasd + "quality", quality);
+                        quality.Clear();
                     }
 
                     foreach (XNode node in ParagraphContent(el, styles))
@@ -176,8 +201,13 @@ namespace StandardElaborationParser
 
             if (superscript.Count != 0)
             {
-                yield return new XElement("sup", superscript);
+                yield return new XElement(xmlns.lasd + "sup", superscript);
                 superscript.Clear();
+            }
+            else if (quality.Count != 0)
+            {
+                yield return new XElement(xmlns.lasd + "quality", quality);
+                quality.Clear();
             }
         }
 
