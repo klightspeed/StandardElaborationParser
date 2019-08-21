@@ -15,13 +15,14 @@
 	</YearLevels>
 	<Subjects>
 		<Subject id="eng" format="docx">English</Subject>
-		<Subject id="math" format="docx">Mathematics</Subject>
+		<Subject id="maths" format="docx">Mathematics</Subject>
 		<Subject id="geog" format="docx">Geography</Subject>
-		<Subject id="hist" format="docx">History</Subject>
+		<Subject id="history" format="docx">History</Subject>
 		<Subject id="sci" format="docx">Science</Subject>
 		<Subject id="hpe" format="docx">Health and Physical Education</Subject>
 		<Subject id="enb" format="docx">Economics and Business</Subject>
 		<Subject id="cnc" format="docx">Civics and Citizenship</Subject>
+		<Subject id="hass" format="docx">Humanities and Social Sciences</Subject>
 		<Subject id="arts_dance" format="docx">The Arts: Dance</Subject>
 		<Subject id="arts_drama" format="docx">The Arts: Drama</Subject>
 		<Subject id="arts_media" format="docx">The Arts: Media Arts</Subject>
@@ -31,6 +32,9 @@
 		<Subject id="tech_digital" format="docx">Digital Technology</Subject>
 		<Subject id="french" format="docx">French</Subject>
 		<Subject id="japanese" format="docx">Japanese</Subject>
+		<Subject id="chinese" format="docx">Chinese</Subject>
+		<Subject id="spanish" format="docx">Spanish</Subject>
+		<Subject id="italian" format="docx">Italian</Subject>
 	</Subjects>
 	<YearLevelGroups>
 		<YearLevelGroup id="p-2">
@@ -59,13 +63,23 @@
 			<AchievementLevel id="E">E</AchievementLevel>
 		</YearLevelGroup>
 	</YearLevelGroups>
+	<YearLevelAliases>
+		<YearLevelAlias id="yr01">yr1</YearLevelAlias>
+		<YearLevelAlias id="yr02">yr2</YearLevelAlias>
+		<YearLevelAlias id="yr03">yr3</YearLevelAlias>
+		<YearLevelAlias id="yr04">yr4</YearLevelAlias>
+		<YearLevelAlias id="yr05">yr5</YearLevelAlias>
+		<YearLevelAlias id="yr06">yr6</YearLevelAlias>
+		<YearLevelAlias id="yr07">yr7</YearLevelAlias>
+		<YearLevelAlias id="yr08">yr8</YearLevelAlias>
+		<YearLevelAlias id="yr09">yr9</YearLevelAlias>
+	</YearLevelAliases>
 	<SubjectGroups>
 		<SubjectGroup id="art">
 			<Subject id="arts_dance" />
 			<Subject id="arts_drama" />
 			<Subject id="arts_media" />
 			<Subject id="arts_music" />
-			<Subject id="arts_visual" />
 			<Subject id="tech_design" />
 			<Subject id="tech_digital" />
 			<YearLevelGroup id="p2">
@@ -90,8 +104,50 @@
 				<YearLevel id="yr10" />
 			</YearLevelGroup>
 		</SubjectGroup>
-		<SubjectGroup id="lote">
+		<SubjectGroup id="visart">
+			<Subject id="arts_visual" />
+			<YearLevelGroup id="p2">
+				<YearLevel id="prep" />
+				<YearLevel id="yr1" />
+				<YearLevel id="yr2" />
+			</YearLevelGroup>
+			<YearLevelGroup id="y3-4">
+				<YearLevel id="yr3" />
+				<YearLevel id="yr4" />
+			</YearLevelGroup>
+			<YearLevelGroup id="y5-6">
+				<YearLevel id="yr5" />
+				<YearLevel id="yr6" />
+			</YearLevelGroup>
+			<YearLevelGroup id="y7-8">
+				<YearLevel id="yr7" />
+				<YearLevel id="yr8" />
+			</YearLevelGroup>
+			<YearLevelGroup id="y9-10">
+				<YearLevel id="yr9" />
+				<YearLevel id="yr10" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="lote-p6a" suffix="_p-10_sequence">
 			<Subject id="french" />
+			<Subject id="chinese" />
+			<YearLevelGroup id="prep_yr-2">
+				<YearLevel id="prep" />
+				<YearLevel id="yr1" />
+				<YearLevel id="yr2" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr3-4">
+				<YearLevel id="yr3" />
+				<YearLevel id="yr4" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr5-6">
+				<YearLevel id="yr5" />
+				<YearLevel id="yr6" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="lote-p6b" suffix="_p-10_sequence">
+			<Subject id="spanish" />
+			<Subject id="italian" />
 			<Subject id="japanese" />
 			<YearLevelGroup id="prep-yr2">
 				<YearLevel id="prep" />
@@ -106,6 +162,27 @@
 				<YearLevel id="yr5" />
 				<YearLevel id="yr6" />
 			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="lote-p10" suffix="_p-10_sequence" suffixname="P-10 Sequence">
+			<Subject id="french" />
+			<Subject id="spanish" />
+			<Subject id="japanese" />
+			<Subject id="chinese" />
+			<Subject id="italian" />
+			<YearLevelGroup id="yr7-8">
+				<YearLevel id="yr7" />
+				<YearLevel id="yr8" />
+			</YearLevelGroup>
+			<YearLevelGroup id="yr9-10">
+				<YearLevel id="yr9" />
+				<YearLevel id="yr10" />
+			</YearLevelGroup>
+		</SubjectGroup>
+		<SubjectGroup id="lote-7-10" suffix="_7-10_sequence" suffixname="7-10 Sequence">
+			<Subject id="french" />
+			<Subject id="spanish" />
+			<Subject id="japanese" />
+			<Subject id="italian" />
 			<YearLevelGroup id="yr7-8">
 				<YearLevel id="yr7" />
 				<YearLevel id="yr8" />
@@ -139,39 +216,38 @@
 				<YearLevel id="yr10" />
 			</YearLevelGroup>
 		</SubjectGroup>
-		<SubjectGroup id="enb">
-			<Subject id="enb" />
-			<YearLevel id="yr5" />
-			<YearLevel id="yr6" />
-			<YearLevel id="yr7" />
-			<YearLevel id="yr8" />
-			<YearLevel id="yr9" />
-			<YearLevel id="yr10" />
-		</SubjectGroup>
-		<SubjectGroup id="cnc">
-			<Subject id="cnc" />
-			<YearLevel id="yr3" />
-			<YearLevel id="yr4" />
-			<YearLevel id="yr5" />
-			<YearLevel id="yr6" />
-			<YearLevel id="yr7" />
-			<YearLevel id="yr8" />
-			<YearLevel id="yr9" />
-			<YearLevel id="yr10" />
-		</SubjectGroup>
 		<SubjectGroup id="other">
 			<Subject id="eng" />
-			<Subject id="math" />
-			<Subject id="geog" />
-			<Subject id="hist" />
+			<Subject id="maths" />
 			<Subject id="sci" />
 			<YearLevel id="prep" />
-			<YearLevel id="yr1" />
-			<YearLevel id="yr2" />
-			<YearLevel id="yr3" />
-			<YearLevel id="yr4" />
-			<YearLevel id="yr5" />
-			<YearLevel id="yr6" />
+			<YearLevel id="yr01" />
+			<YearLevel id="yr02" />
+			<YearLevel id="yr03" />
+			<YearLevel id="yr04" />
+			<YearLevel id="yr05" />
+			<YearLevel id="yr06" />
+			<YearLevel id="yr07" />
+			<YearLevel id="yr08" />
+			<YearLevel id="yr09" />
+			<YearLevel id="yr10" />
+		</SubjectGroup>
+		<SubjectGroup id="hassp7">
+			<Subject id="hass" />
+			<YearLevel id="prep" />
+			<YearLevel id="yr01" />
+			<YearLevel id="yr02" />
+			<YearLevel id="yr03" />
+			<YearLevel id="yr04" />
+			<YearLevel id="yr05" />
+			<YearLevel id="yr06" />
+			<YearLevel id="yr07" />
+		</SubjectGroup>
+		<SubjectGroup id="hass7-10">
+			<Subject id="cnc" />
+			<Subject id="enb" />
+			<Subject id="geog" />
+			<Subject id="history" />
 			<YearLevel id="yr7" />
 			<YearLevel id="yr8" />
 			<YearLevel id="yr9" />

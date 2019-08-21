@@ -18,6 +18,8 @@ namespace StandardElaborationParser
     {
         private static Dictionary<string, string> YearLevels;
 
+        private static Dictionary<string, string> YearLevelAliases;
+
         private static Dictionary<string, string> Subjects;
 
         private static Dictionary<string, string> SubjectFormats;
@@ -30,6 +32,10 @@ namespace StandardElaborationParser
 
         private static Dictionary<string, string[]> SubjectGroupings;
 
+        private static Dictionary<string, string> GroupSuffixes;
+
+        private static Dictionary<string, string> GroupSuffixNames;
+
         private static void ProcessConfig()
         {
             XDocument configfile = XDocument.Load(File.Open("stdelabs.xml", FileMode.Open));
@@ -39,6 +45,13 @@ namespace StandardElaborationParser
                     .Elements("YearLevel")
                     .ToDictionary(
                         e => e.Attribute("id").Value, 
+                        e => e.Value
+                    );
+            YearLevelAliases =
+                root.Element("YearLevelAliases")
+                    .Elements("YearLevelAlias")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
                         e => e.Value
                     );
             Subjects = 
@@ -93,6 +106,22 @@ namespace StandardElaborationParser
                               .Select(s => s.Attribute("id").Value)
                               .ToArray()
                     );
+
+            GroupSuffixes =
+                root.Element("SubjectGroups")
+                    .Elements("SubjectGroup")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Attribute("suffix")?.Value ?? ""
+                    );
+
+            GroupSuffixNames =
+                root.Element("SubjectGroups")
+                    .Elements("SubjectGroup")
+                    .ToDictionary(
+                        e => e.Attribute("id").Value,
+                        e => e.Attribute("suffixname")?.Value
+                    );
         }
 
 
@@ -107,6 +136,11 @@ namespace StandardElaborationParser
             foreach (KeyValuePair<string, string[]> klagrp_kvp in SubjectGroupings)
             {
                 string klagroupname = klagrp_kvp.Key;
+                string suffix = GroupSuffixes[klagroupname];
+                string suffixname = GroupSuffixNames[klagroupname];
+                suffixname = suffixname == null ? "" : " " + suffixname;
+
+
                 Dictionary<string, string[]> years = YearLevelGroupings[klagroupname];
 
                 foreach (string klaname in klagrp_kvp.Value)
@@ -115,7 +149,7 @@ namespace StandardElaborationParser
                     {
                         string format = SubjectFormats.ContainsKey(klaname) ? SubjectFormats[klaname] : "docx";
                         string gradegrpname = gradegrp_kvp.Key;
-                        string filename = "ac_" + klaname + "_" + gradegrpname + "_se." + format;
+                        string filename = "ac_" + klaname + "_" + gradegrpname + "_se" + suffix + "." + format;
                         string filepath = Path.Combine(Environment.CurrentDirectory, filename);
                         string sourceurl = "https://www.qcaa.qld.edu.au/downloads/p_10/" + filename;
 
@@ -128,17 +162,24 @@ namespace StandardElaborationParser
                         {
                             foreach (string gradename in gradegrp_kvp.Value)
                             {
-                                Console.WriteLine("Processing {0} {1} ({2})", YearLevels[gradename], Subjects[klaname], filename);
+                                string gradeid = gradename;
+
+                                if (YearLevelAliases.ContainsKey(gradename))
+                                {
+                                    gradeid = YearLevelAliases[gradename];
+                                }
+
+                                Console.WriteLine("Processing {0} {1} ({2})", YearLevels[gradeid], Subjects[klaname] + suffixname, filename);
 
                                 KeyLearningArea kla = null;
 
                                 if (format == "docx")
                                 {
-                                    kla = StandardElaborationDocxParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
+                                    kla = StandardElaborationDocxParser.ProcessKLA(YearLevels[gradeid], gradeid, Subjects[klaname] + suffixname, klaname + suffix, filepath);
                                 }
                                 else if (format == "pdf")
                                 {
-                                    kla = StandardElaborationPDFParser.ProcessKLA(YearLevels[gradename], gradename, Subjects[klaname], klaname, filepath);
+                                    kla = StandardElaborationPDFParser.ProcessKLA(YearLevels[gradeid], gradeid, Subjects[klaname] + suffixname, klaname + suffix, filepath);
                                 }
 
                                 if (kla != null)
@@ -146,12 +187,12 @@ namespace StandardElaborationParser
                                     kla.SourceDocumentURL = sourceurl;
                                     string xmlname = String.Format("{0}-{1}.xml", kla.YearLevelID, kla.SubjectID);
 
-                                    if (!klarefs.ContainsKey(gradename))
+                                    if (!klarefs.ContainsKey(gradeid))
                                     {
-                                        klarefs[gradename] = new Dictionary<string, KeyLearningAreaReference>();
+                                        klarefs[gradeid] = new Dictionary<string, KeyLearningAreaReference>();
                                     }
 
-                                    klarefs[gradename][klaname] = new KeyLearningAreaReference
+                                    klarefs[gradeid][klaname + suffix] = new KeyLearningAreaReference
                                     {
                                         SubjectID = kla.SubjectID,
                                         Subject = kla.Subject,
@@ -186,9 +227,9 @@ namespace StandardElaborationParser
                 {
                     foreach (KeyValuePair<string, string> kla_kvp in Subjects)
                     {
-                        if (klarefs[grade_kvp.Key].ContainsKey(kla_kvp.Key))
+                        foreach (var klaref_kvp in klarefs[grade_kvp.Key].Where(kvp => kvp.Key == kla_kvp.Key || kvp.Key.StartsWith(kla_kvp.Key + "_")))
                         {
-                            grades[grade_kvp.Key].KLAs.Add(klarefs[grade_kvp.Key][kla_kvp.Key]);
+                            grades[grade_kvp.Key].KLAs.Add(klaref_kvp.Value);
                         }
                     }
                 }

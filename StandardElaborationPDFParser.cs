@@ -389,7 +389,10 @@ namespace StandardElaborationParser
 
                                 for (int i = 0; i < tc.RowSpan; i++)
                                 {
-                                    cells[rownum + i][cn] = tc;
+                                    if (cn < cells[rownum + i].Length)
+                                    {
+                                        cells[rownum + i][cn] = tc;
+                                    }
                                 }
 
                                 colnum = cn + 1;
